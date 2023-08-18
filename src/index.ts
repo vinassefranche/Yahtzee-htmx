@@ -23,6 +23,8 @@ const oneDotInRight = (color?: DotColor) => `<div class="flex justify-end">
   ${dot(color)}
 </div>`;
 
+const buttonClass = "bg-lime-600 text-white rounded-md px-2 py-1"
+
 const dice = ({
   number,
   index,
@@ -102,9 +104,9 @@ app.get("/", (_, res) => {
           <div class="flex gap-2">
             ${generateDicesHtml(game)}
           </div>
-          <button hx-post="/start" hx-target="#game" class="bg-lime-600 text-white rounded-sm px-2 py-1">Start</button>
+          <button hx-post="/start" hx-target="#game" class="${buttonClass}">Start</button>
         </div>
-        <button hx-post="/reset" hx-target="#game" class="bg-red-400 text-white rounded-sm px-2 py-1 mt-5">Reset</button>
+        <button hx-post="/reset" hx-target="#game" class="bg-red-400 text-white rounded-md px-2 py-1 mt-5">Reset</button>
       </body>
     </html>
   `);
@@ -122,7 +124,7 @@ app.post("/reset", (_, res) => {
     <div class="flex gap-2">
       ${generateDicesHtml(game)}
     </div>
-    <button hx-post="/start" hx-target="#game" class="bg-lime-600 text-white rounded-sm px-2 py-1">Start</button>`);
+    <button hx-post="/start" hx-target="#game" class="${buttonClass}">Start</button>`);
 });
 
 app.post("/start", (_, res) => {
@@ -135,7 +137,7 @@ app.post("/start", (_, res) => {
     <div class="flex gap-2">
       ${generateDicesHtml(game)}
     </div>
-    <button hx-put="/throw" hx-target="#game" class="bg-lime-600 text-white rounded-sm px-2 py-1">Throw not selected dices</button>`);
+    <button hx-put="/throw" hx-target="#game" class="${buttonClass}">Throw not selected dices</button>`);
 });
 
 const throwDices = () => {
@@ -163,7 +165,7 @@ app.put("/throw", (_, res) => {
     </div>
     ${
       game.round === 2
-        ? `<button hx-put="/throw" hx-target="#game" class="bg-lime-600 text-white rounded-sm px-2 py-1">Throw not selected dices</button>`
+        ? `<button hx-put="/throw" hx-target="#game" class="${buttonClass}">Throw not selected dices</button>`
         : ""
     }
   `);
