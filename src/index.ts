@@ -6,8 +6,8 @@ const port = 3000;
 app.use(express.static("build"));
 
 type DotColor = "white" | "black";
-const diceNumbers = [1, 2, 3, 4, 5, 6] as const;
-type DiceNumber = 0 | (typeof diceNumbers)[number];
+const dieNumbers = [1, 2, 3, 4, 5, 6] as const;
+type DieNumber = typeof dieNumbers[number];
 
 const dot = (color: DotColor = "black") =>
   `<div class='w-1 h-1 rounded-full ${
@@ -23,14 +23,14 @@ const oneDotInRight = (color?: DotColor) => `<div class="flex justify-end">
   ${dot(color)}
 </div>`;
 
-const buttonClass = "bg-lime-600 text-white rounded-md px-2 py-1"
+const buttonClass = "bg-lime-600 text-white rounded-md px-2 py-1";
 
-const dice = ({
+const die = ({
   number,
   index,
   selected,
 }: {
-  number: DiceNumber;
+  number: DieNumber;
   index: number;
   selected: boolean;
 }) => {
@@ -40,13 +40,11 @@ const dice = ({
       class="${
         selected ? "bg-black" : "bg-white"
       } w-7 h-7 border border-black border-solid rounded-md p-[4px] flex flex-col justify-around"
-      ${number === 0 ? "" : `hx-put="/select/${index}"`}
+      hx-put="/select/${index}"
       hx-swap="outerHTML"
     >
       ${(() => {
         switch (number) {
-          case 0:
-            return "";
           case 1:
             return oneCenteredDot(dotColor);
           case 2:
@@ -71,22 +69,13 @@ const dice = ({
   `;
 };
 
-type Dice = { number: DiceNumber; selected: boolean };
-type Game = { dices: [Dice, Dice, Dice, Dice, Dice]; round: 1 | 2 | 3 };
-const game: Game = {
-  dices: [
-    { number: 0, selected: false },
-    { number: 0, selected: false },
-    { number: 0, selected: false },
-    { number: 0, selected: false },
-    { number: 0, selected: false },
-  ],
-  round: 1,
-};
+type Die = { number: DieNumber; selected: boolean };
+type Game = { dice: [Die, Die, Die, Die, Die]; round: 1 | 2 | 3 };
+let game: Game | undefined;
 
 const generateDicesHtml = (game: Game) =>
-  `${game.dices
-    .map(({ number, selected }, index) => dice({ number, index, selected }))
+  `${game.dice
+    .map(({ number, selected }, index) => die({ number, index, selected }))
     .join("")}`;
 
 app.get("/", (_, res) => {
@@ -101,10 +90,7 @@ app.get("/", (_, res) => {
       </head>
       <body class="p-6">
         <div id="game" class="flex flex-col gap-4 items-baseline">
-          <div class="flex gap-2">
-            ${generateDicesHtml(game)}
-          </div>
-          <button hx-post="/start" hx-target="#game" class="${buttonClass}">Start</button>
+          <button hx-put="/throw" hx-target="#game" class="${buttonClass}">Throw dice</button>
         </div>
         <button hx-post="/reset" hx-target="#game" class="bg-red-400 text-white rounded-md px-2 py-1 mt-5">Reset</button>
       </body>
@@ -113,58 +99,67 @@ app.get("/", (_, res) => {
 });
 
 app.post("/reset", (_, res) => {
-  game.dices = [
-    { number: 0, selected: false },
-    { number: 0, selected: false },
-    { number: 0, selected: false },
-    { number: 0, selected: false },
-    { number: 0, selected: false },
-  ];
+  game = undefined;
   res.header("Content-Type", "text/html").send(`
-    <div class="flex gap-2">
-      ${generateDicesHtml(game)}
-    </div>
-    <button hx-post="/start" hx-target="#game" class="${buttonClass}">Start</button>`);
+    <button hx-put="/throw" hx-target="#game" class="${buttonClass}">Throw dice</button>
+  `);
 });
 
-app.post("/start", (_, res) => {
-  game.dices = game.dices.map(({ selected }) => ({
-    number: diceNumbers[Math.floor(Math.random() * diceNumbers.length)]!,
-    selected,
-  })) as [Dice, Dice, Dice, Dice, Dice];
-  game.round = 1;
-  res.header("Content-Type", "text/html").send(`
-    <div class="flex gap-2">
-      ${generateDicesHtml(game)}
-    </div>
-    <button hx-put="/throw" hx-target="#game" class="${buttonClass}">Throw not selected dices</button>`);
-});
+const generateRandomDieNumber = (): DieNumber =>
+  dieNumbers[Math.floor(Math.random() * dieNumbers.length)]!;
 
-const throwDices = () => {
-  game.dices = game.dices.map((dice) =>
+const throwDice = (currentDice: Game["dice"]) =>
+  currentDice.map((dice) =>
     dice.selected
       ? dice
       : {
-          number: diceNumbers[Math.floor(Math.random() * diceNumbers.length)]!,
+          number: dieNumbers[Math.floor(Math.random() * dieNumbers.length)]!,
           selected: false,
         }
-  ) as [Dice, Dice, Dice, Dice, Dice];
-};
+  ) as Game["dice"];
 
 app.put("/throw", (_, res) => {
-  const newRound = game.round + 1;
-  if (!isGameRound(newRound)) {
-    return res.status(400).send("Bad request");
-  }
+  if (!game) {
+    game = {
+      dice: [
+        {
+          number: generateRandomDieNumber(),
+          selected: false,
+        },
+        {
+          number: generateRandomDieNumber(),
+          selected: false,
+        },
+        {
+          number: generateRandomDieNumber(),
+          selected: false,
+        },
+        {
+          number: generateRandomDieNumber(),
+          selected: false,
+        },
+        {
+          number: generateRandomDieNumber(),
+          selected: false,
+        },
+      ],
+      round: 1,
+    };
+  } else {
+    const newRound = game.round + 1;
+    if (!isGameRound(newRound)) {
+      return res.status(400).send("Bad request");
+    }
 
-  throwDices();
-  game.round = newRound;
+    game.dice = throwDice(game.dice);
+    game.round = newRound;
+  }
   res.header("Content-Type", "text/html").send(`
     <div class="flex gap-2">
       ${generateDicesHtml(game)}
     </div>
     ${
-      game.round === 2
+      game.round !== 3
         ? `<button hx-put="/throw" hx-target="#game" class="${buttonClass}">Throw not selected dices</button>`
         : ""
     }
@@ -173,15 +168,18 @@ app.put("/throw", (_, res) => {
 
 app.put("/select/:index", (req, res) => {
   const index = parseInt(req.params.index);
-  if (isNaN(index) || !isIndex(index))
+  if (isNaN(index) || !isIndex(index)) {
     return res.status(400).send("Bad request");
+  }
+  if (!game) {
+    return res.status(400).send("Game not started");
+  }
 
-  const { number, selected } = game.dices[index];
-  if (number === 0) return res.status(400).send("Bad request");
-  game.dices[index] = { ...game.dices[index], selected: !selected };
+  const { number, selected } = game.dice[index];
+  game.dice[index] = { ...game.dice[index], selected: !selected };
   res
     .header("Content-Type", "text/html")
-    .send(dice({ number, index, selected: !selected }));
+    .send(die({ number, index, selected: !selected }));
 });
 
 const isIndex = (index: number): index is 0 | 1 | 2 | 3 | 4 =>
