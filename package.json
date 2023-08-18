@@ -18,6 +18,7 @@
   },
   "packageManager": "yarn@3.6.2",
   "scripts": {
-    "start": "concurrently \"nodemon src/index.ts\" \"tailwindcss -i ./src/tailwind.css -o ./build/style.css --watch\""
+    "start": "concurrently \"nodemon src/index.ts\" \"tailwindcss -i ./src/tailwind.css -o ./build/style.css --watch\"",
+    "compile-css": "tailwindcss -i ./src/tailwind.css -o ./build/style.css"
   }
 }

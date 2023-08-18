@@ -9,19 +9,12 @@ type DotColor = "white" | "black";
 const dieNumbers = [1, 2, 3, 4, 5, 6] as const;
 type DieNumber = typeof dieNumbers[number];
 
-const dot = (color: DotColor = "black") =>
-  `<div class='w-1 h-1 rounded-full ${
+const dot = (color: DotColor = "black", visible: boolean) =>
+  `<div class="w-1 h-1 rounded-full ${
     color === "white" ? "bg-white" : "bg-black"
-  }'></div>`;
-const twoDotsInRow = (color?: DotColor) => `<div class="flex justify-around">
-  ${dot(color)}${dot(color)}
-</div>`;
-const oneCenteredDot = (color?: DotColor) => `<div class="flex justify-center">
-  ${dot(color)}
-</div>`;
-const oneDotInRight = (color?: DotColor) => `<div class="flex justify-end">
-  ${dot(color)}
-</div>`;
+  } ${
+    visible ? "opacity-100" : "opacity-0"
+  }"></div>`;
 
 const buttonClass = "bg-lime-600 text-white rounded-md px-2 py-1";
 
@@ -39,32 +32,19 @@ const die = ({
     <div
       class="${
         selected ? "bg-black" : "bg-white"
-      } w-7 h-7 border border-black border-solid rounded-md p-[4px] flex flex-col justify-around"
+      } w-7 h-7 border border-black border-solid rounded-md p-[5px] flex flex-col justify-around"
       hx-put="/select/${index}"
       hx-swap="outerHTML"
     >
-      ${(() => {
-        switch (number) {
-          case 1:
-            return oneCenteredDot(dotColor);
-          case 2:
-            return `${dot(dotColor)}${oneDotInRight(dotColor)}`;
-          case 3:
-            return `${dot(dotColor)}${oneCenteredDot(dotColor)}${oneDotInRight(
-              dotColor
-            )}`;
-          case 4:
-            return `${twoDotsInRow(dotColor)}${twoDotsInRow(dotColor)}`;
-          case 5:
-            return `${twoDotsInRow(dotColor)}${oneCenteredDot(
-              dotColor
-            )}${twoDotsInRow(dotColor)}`;
-          case 6:
-            return `${twoDotsInRow(dotColor)}${twoDotsInRow(
-              dotColor
-            )}${twoDotsInRow(dotColor)}`;
-        }
-      })()}
+      <div class="flex justify-between">
+        ${dot(dotColor, number !== 1)}${dot(dotColor, [4, 5, 6].includes(number))}
+      </div>
+      <div class="flex justify-between">
+        ${dot(dotColor, number === 6)}${dot(dotColor, number % 2 === 1)}${dot(dotColor, number === 6)}
+      </div>
+      <div class="flex justify-between">
+        ${dot(dotColor, [4, 5, 6].includes(number))}${dot(dotColor, number !== 1)}
+      </div>
     </div>
   `;
 };
