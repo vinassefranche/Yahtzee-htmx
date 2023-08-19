@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+#dice .spinner{
+  display:none;
+}
+#dice .die{
+  display:flex;
+}
+#dice.htmx-request .die{
+  display:none;
+}
+#dice.htmx-request .spinner{
+  display:inline;
+}

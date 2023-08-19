@@ -7,14 +7,12 @@ app.use(express.static("build"));
 
 type DotColor = "white" | "black";
 const dieNumbers = [1, 2, 3, 4, 5, 6] as const;
-type DieNumber = typeof dieNumbers[number];
+type DieNumber = (typeof dieNumbers)[number];
 
 const dot = (color: DotColor = "black", visible: boolean) =>
   `<div class="w-1 h-1 rounded-full ${
     color === "white" ? "bg-white" : "bg-black"
-  } ${
-    visible ? "opacity-100" : "opacity-0"
-  }"></div>`;
+  } ${visible ? "opacity-100" : "opacity-0"}"></div>`;
 
 const buttonClass = "bg-lime-600 text-white rounded-md px-2 py-1";
 
@@ -30,24 +28,38 @@ const die = ({
   const dotColor: DotColor = selected ? "white" : "black";
   return `
     <div
-      class="${
+      class="die ${
         selected ? "bg-black" : "bg-white"
       } w-7 h-7 border border-black border-solid rounded-md p-[5px] flex flex-col justify-around"
       hx-put="/select/${index}"
       hx-swap="outerHTML"
     >
       <div class="flex justify-between">
-        ${dot(dotColor, number !== 1)}${dot(dotColor, [4, 5, 6].includes(number))}
+        ${dot(dotColor, number !== 1)}${dot(
+    dotColor,
+    [4, 5, 6].includes(number)
+  )}
       </div>
       <div class="flex justify-between">
-        ${dot(dotColor, number === 6)}${dot(dotColor, number % 2 === 1)}${dot(dotColor, number === 6)}
+        ${dot(dotColor, number === 6)}${dot(dotColor, number % 2 === 1)}${dot(
+    dotColor,
+    number === 6
+  )}
       </div>
       <div class="flex justify-between">
-        ${dot(dotColor, [4, 5, 6].includes(number))}${dot(dotColor, number !== 1)}
+        ${dot(dotColor, [4, 5, 6].includes(number))}${dot(
+    dotColor,
+    number !== 1
+  )}
       </div>
     </div>
   `;
 };
+
+const throwDiceButton = (label: string = "Throw dice") =>
+  `<button hx-put="/throw" hx-target="#game" hx-swap="innerHTML settle:500ms" hx-indicator="#dice" class="${buttonClass}">${label}</button>`;
+
+const spinner = `<img class="spinner h-7" src="/tail-spin.svg"/>`;
 
 type Die = { number: DieNumber; selected: boolean };
 type Game = { dice: [Die, Die, Die, Die, Die]; round: 1 | 2 | 3 };
@@ -68,9 +80,12 @@ app.get("/", (_, res) => {
         <script src="https://unpkg.com/htmx.org/dist/htmx.js" ></script>
         <link rel="stylesheet" href="/style.css" />
       </head>
-      <body class="p-6">
-        <div id="game" class="flex flex-col gap-4 items-baseline">
-          <button hx-put="/throw" hx-target="#game" class="${buttonClass}">Throw dice</button>
+      <body class="flex flex-col justify-center items-center h-screen">
+        <div id="game" class="flex flex-col gap-4 items-center">
+          <div id="dice" class="flex gap-2">
+            ${spinner}
+          </div>
+          ${throwDiceButton()}
         </div>
         <button hx-post="/reset" hx-target="#game" class="bg-red-400 text-white rounded-md px-2 py-1 mt-5">Reset</button>
       </body>
@@ -81,7 +96,10 @@ app.get("/", (_, res) => {
 app.post("/reset", (_, res) => {
   game = undefined;
   res.header("Content-Type", "text/html").send(`
-    <button hx-put="/throw" hx-target="#game" class="${buttonClass}">Throw dice</button>
+    <div id="dice" class="flex gap-2">
+      ${spinner}
+    </div>
+    ${throwDiceButton()}
   `);
 });
 
@@ -135,14 +153,11 @@ app.put("/throw", (_, res) => {
     game.round = newRound;
   }
   res.header("Content-Type", "text/html").send(`
-    <div class="flex gap-2">
+    <div id="dice" class="flex gap-2">
       ${generateDicesHtml(game)}
+      ${spinner}
     </div>
-    ${
-      game.round !== 3
-        ? `<button hx-put="/throw" hx-target="#game" class="${buttonClass}">Throw not selected dices</button>`
-        : ""
-    }
+    ${game.round !== 3 ? throwDiceButton("Throw not selected dice") : ""}
   `);
 });
 
