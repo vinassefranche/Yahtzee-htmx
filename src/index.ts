@@ -56,8 +56,10 @@ const die = ({
   `;
 };
 
-const throwDiceButton = (label: string = "Throw dice") =>
-  `<button hx-put="/throw" hx-target="#game" hx-swap="innerHTML settle:500ms" hx-indicator="#dice" class="${buttonClass}">${label}</button>`;
+const throwDiceButton = (label: string | null = "Throw dice") =>
+  `<div class="h-8">
+    ${label ? `<button hx-put="/throw" hx-target="#game" hx-swap="innerHTML settle:500ms" hx-indicator="#dice" class="${buttonClass}">${label}</button>` : ''}
+  </div>`;
 
 const spinner = `<img class="spinner h-7" src="/tail-spin.svg"/>`;
 
@@ -82,7 +84,7 @@ app.get("/", (_, res) => {
       </head>
       <body class="flex flex-col justify-center items-center h-screen">
         <div id="game" class="flex flex-col gap-4 items-center">
-          <div id="dice" class="flex gap-2">
+          <div id="dice" class="flex gap-2 h-7">
             ${spinner}
           </div>
           ${throwDiceButton()}
@@ -96,7 +98,7 @@ app.get("/", (_, res) => {
 app.post("/reset", (_, res) => {
   game = undefined;
   res.header("Content-Type", "text/html").send(`
-    <div id="dice" class="flex gap-2">
+    <div id="dice" class="flex gap-2 h-7">
       ${spinner}
     </div>
     ${throwDiceButton()}
@@ -153,11 +155,11 @@ app.put("/throw", (_, res) => {
     game.round = newRound;
   }
   res.header("Content-Type", "text/html").send(`
-    <div id="dice" class="flex gap-2">
+    <div id="dice" class="flex gap-2 h-7">
       ${generateDicesHtml(game)}
       ${spinner}
     </div>
-    ${game.round !== 3 ? throwDiceButton("Throw not selected dice") : ""}
+    ${throwDiceButton(game.round !== 3 ? "Throw not selected dice" : null)}
   `);
 });
 
