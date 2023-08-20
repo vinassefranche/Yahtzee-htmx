@@ -628,11 +628,11 @@ video {
   display:flex;
 }
 
-#dice.htmx-request .die{
+#dice.htmx-settling .die{
   display:none;
 }
 
-#dice.htmx-request .spinner{
+#dice.htmx-settling .spinner{
   display:inline;
 }
 
