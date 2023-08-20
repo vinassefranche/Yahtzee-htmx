@@ -5,16 +5,27 @@ const port = 3000;
 
 app.use(express.static("build"));
 
-type DotColor = "white" | "black";
 const dieNumbers = [1, 2, 3, 4, 5, 6] as const;
 type DieNumber = (typeof dieNumbers)[number];
 
-const dot = (color: DotColor = "black", visible: boolean) =>
-  `<div class="w-1 h-1 rounded-full ${
-    color === "white" ? "bg-white" : "bg-black"
-  } ${visible ? "opacity-100" : "opacity-0"}"></div>`;
-
 const buttonClass = "bg-lime-600 text-white rounded-md px-2 py-1";
+
+const dieNumberToClass = (number: DieNumber) => {
+  switch (number) {
+    case 1:
+      return "one";
+    case 2:
+      return "two";
+    case 3:
+      return "three";
+    case 4:
+      return "four";
+    case 5:
+      return "five";
+    case 6:
+      return "six";
+  }
+};
 
 const die = ({
   number,
@@ -24,37 +35,14 @@ const die = ({
   number: DieNumber;
   index: number;
   selected: boolean;
-}) => {
-  const dotColor: DotColor = selected ? "white" : "black";
-  return `
+}) => `
     <div
-      class="die ${
-        selected ? "bg-black" : "bg-white"
-      } w-7 h-7 border border-black border-solid rounded-md p-[5px] flex flex-col justify-around"
+      class="die ${selected ? "selected" : ""} ${dieNumberToClass(number)}"
       hx-put="/select/${index}"
       hx-swap="outerHTML"
     >
-      <div class="flex justify-between">
-        ${dot(dotColor, number !== 1)}${dot(
-    dotColor,
-    [4, 5, 6].includes(number)
-  )}
-      </div>
-      <div class="flex justify-between">
-        ${dot(dotColor, number === 6)}${dot(dotColor, number % 2 === 1)}${dot(
-    dotColor,
-    number === 6
-  )}
-      </div>
-      <div class="flex justify-between">
-        ${dot(dotColor, [4, 5, 6].includes(number))}${dot(
-    dotColor,
-    number !== 1
-  )}
-      </div>
     </div>
   `;
-};
 
 const throwDiceButton = (label: string | null = "Throw dice") =>
   label
@@ -91,14 +79,13 @@ app.get("/", (_, res) => {
       </head>
       <body class="flex flex-col justify-center items-center h-screen">
         <div id="game" class="flex flex-col gap-4 items-center">
-          <div id="dice" class="flex gap-2 h-7">
+          <div id="dice" class="flex gap-2 bg-green-700 p-6 w-[205px] h-[73px]">
             ${spinner}
           </div>
           <div class="flex gap-2">
             <div
               class="h-8"
-              id="throw-dice-button-container"
-              hx-trigger="load, event-after-throw"
+              hx-trigger="load, event-after-throw from:body, event-after-reset from:body"
               hx-get="/main-button"
             ></div>
             <button hx-post="/reset" hx-target="#dice" class="bg-red-400 text-white rounded-md px-2 py-1">Reset</button>
@@ -123,11 +110,16 @@ app.get("/main-button", (_, res) => {
 
 app.post("/reset", (_, res) => {
   game = undefined;
-  res.send(spinner);
+  res.header("hx-trigger", "event-after-reset").send(spinner);
 });
 
 const generateRandomDieNumber = (): DieNumber =>
   dieNumbers[Math.floor(Math.random() * dieNumbers.length)]!;
+
+const initiateDie = (): Die => ({
+  number: generateRandomDieNumber(),
+  selected: false,
+});
 
 const throwDice = (currentDice: Game["dice"]) =>
   currentDice.map((dice) =>
@@ -143,26 +135,11 @@ app.put("/throw", (_, res) => {
   if (!game) {
     game = {
       dice: [
-        {
-          number: generateRandomDieNumber(),
-          selected: false,
-        },
-        {
-          number: generateRandomDieNumber(),
-          selected: false,
-        },
-        {
-          number: generateRandomDieNumber(),
-          selected: false,
-        },
-        {
-          number: generateRandomDieNumber(),
-          selected: false,
-        },
-        {
-          number: generateRandomDieNumber(),
-          selected: false,
-        },
+        initiateDie(),
+        initiateDie(),
+        initiateDie(),
+        initiateDie(),
+        initiateDie(),
       ],
       round: 1,
     };
@@ -175,9 +152,9 @@ app.put("/throw", (_, res) => {
     game.dice = throwDice(game.dice);
     game.round = newRound;
   }
-  res.header("hx-trigger-after-swap", "event-after-throw").send(`
-      ${generateDicesHtml(game)}
-      ${spinner}
+  res.header("hx-trigger", "event-after-throw").send(`
+    ${generateDicesHtml(game)}
+    ${spinner}
   `);
 });
 

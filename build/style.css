@@ -534,20 +534,12 @@ video {
   --tw-backdrop-sepia:  ;
 }
 
-.visible {
-  visibility: visible;
-}
-
 .static {
   position: static;
 }
 
 .flex {
   display: flex;
-}
-
-.h-1 {
-  height: 0.25rem;
 }
 
 .h-7 {
@@ -558,16 +550,16 @@ video {
   height: 2rem;
 }
 
+.h-\[73px\] {
+  height: 73px;
+}
+
 .h-screen {
   height: 100vh;
 }
 
-.w-1 {
-  width: 0.25rem;
-}
-
-.w-7 {
-  width: 1.75rem;
+.w-\[205px\] {
+  width: 205px;
 }
 
 .flex-col {
@@ -582,14 +574,6 @@ video {
   justify-content: center;
 }
 
-.justify-between {
-  justify-content: space-between;
-}
-
-.justify-around {
-  justify-content: space-around;
-}
-
 .gap-2 {
   gap: 0.5rem;
 }
@@ -598,30 +582,13 @@ video {
   gap: 1rem;
 }
 
-.rounded-full {
-  border-radius: 9999px;
-}
-
 .rounded-md {
   border-radius: 0.375rem;
 }
 
-.border {
-  border-width: 1px;
-}
-
-.border-solid {
-  border-style: solid;
-}
-
-.border-black {
-  --tw-border-opacity: 1;
-  border-color: rgb(0 0 0 / var(--tw-border-opacity));
-}
-
-.bg-black {
+.bg-green-700 {
   --tw-bg-opacity: 1;
-  background-color: rgb(0 0 0 / var(--tw-bg-opacity));
+  background-color: rgb(21 128 61 / var(--tw-bg-opacity));
 }
 
 .bg-lime-600 {
@@ -634,13 +601,8 @@ video {
   background-color: rgb(248 113 113 / var(--tw-bg-opacity));
 }
 
-.bg-white {
-  --tw-bg-opacity: 1;
-  background-color: rgb(255 255 255 / var(--tw-bg-opacity));
-}
-
-.p-\[5px\] {
-  padding: 5px;
+.p-6 {
+  padding: 1.5rem;
 }
 
 .px-2 {
@@ -658,14 +620,6 @@ video {
   color: rgb(255 255 255 / var(--tw-text-opacity));
 }
 
-.opacity-0 {
-  opacity: 0;
-}
-
-.opacity-100 {
-  opacity: 1;
-}
-
 #dice .spinner{
   display:none;
 }
@@ -680,4 +634,77 @@ video {
 
 #dice.htmx-request .spinner{
   display:inline;
+}
+
+.die {
+  font-size: 35px;
+  font-weight: 500;
+  line-height: 25px;
+  width: 25px;
+  display: flex;
+  justify-content: center;
+}
+
+.die.selected {
+  background-color: black;
+  color: white;
+}
+
+.die.rolling::after {
+  content:'';
+  animation: rolling 0.5s linear infinite;
+}
+
+@keyframes rolling {
+  0% {
+    content:'\2680';
+  }
+
+  17% {
+    content:'\2681';
+  }
+
+  33% {
+    content:'\2682';
+  }
+
+  50% {
+    content:'\2683';
+  }
+
+  67% {
+    content:'\2684';
+  }
+
+  83% {
+    content:'\2685';
+  }
+
+  100% {
+    content:'\2680';
+  }
+}
+
+.die.one::after {
+  content:'\2680';
+}
+
+.die.two::after {
+  content:'\2681';
+}
+
+.die.three::after {
+  content:'\2682';
+}
+
+.die.four::after {
+  content:'\2683';
+}
+
+.die.five::after {
+  content:'\2684';
+}
+
+.die.six::after {
+  content:'\2685';
 }

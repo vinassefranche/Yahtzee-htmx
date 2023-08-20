@@ -14,3 +14,53 @@
 #dice.htmx-request .spinner{
   display:inline;
 }
+
+
+.die {
+  font-size: 35px;
+  font-weight: 500;
+  line-height: 25px;
+  width: 25px;
+  display: flex;
+  justify-content: center;
+}
+
+.die.selected {
+  background-color: black;
+  color: white;
+}
+
+.die.rolling::after {
+  content:'';
+  animation: rolling 0.5s linear infinite;
+}
+
+@keyframes rolling {
+  0% {content:'\2680';}
+  17% {content:'\2681';}
+  33% {content:'\2682';}
+  50% {content:'\2683';}
+  67% {content:'\2684';}
+  83% {content:'\2685';}
+  100% {content:'\2680';}
+}
+
+
+.die.one::after {
+  content:'\2680';
+}
+.die.two::after {
+  content:'\2681';
+}
+.die.three::after {
+  content:'\2682';
+}
+.die.four::after {
+  content:'\2683';
+}
+.die.five::after {
+  content:'\2684';
+}
+.die.six::after {
+  content:'\2685';
+}
