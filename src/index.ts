@@ -85,7 +85,7 @@ app.get("/", (_, res) => {
     <html>
       <head>
       <meta charset="utf-8">
-        <title>Welcome to htmx</title>
+        <title>Yams</title>
         <script src="https://unpkg.com/htmx.org/dist/htmx.js" ></script>
         <link rel="stylesheet" href="/style.css" />
       </head>
@@ -94,14 +94,16 @@ app.get("/", (_, res) => {
           <div id="dice" class="flex gap-2 h-7">
             ${spinner}
           </div>
-          <div 
-            class="h-8"
-            id="throw-dice-button-container"
-            hx-trigger="load, event-after-throw"
-            hx-get="/main-button"
-          />
+          <div class="flex gap-2">
+            <div
+              class="h-8"
+              id="throw-dice-button-container"
+              hx-trigger="load, event-after-throw"
+              hx-get="/main-button"
+            ></div>
+            <button hx-post="/reset" hx-target="#dice" class="bg-red-400 text-white rounded-md px-2 py-1">Reset</button>
+          </div>
         </div>
-        <button hx-post="/reset" hx-target="#dice" class="bg-red-400 text-white rounded-md px-2 py-1 mt-5">Reset</button>
       </body>
     </html>
   `);
