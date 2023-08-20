@@ -7,6 +7,43 @@ app.use(express.static("build"));
 
 const dieNumbers = [1, 2, 3, 4, 5, 6] as const;
 type DieNumber = (typeof dieNumbers)[number];
+const gameRounds = [1, 2, 3];
+type GameRound = (typeof gameRounds)[number];
+type Die = { number: DieNumber; selected: boolean };
+type Dice = [Die, Die, Die, Die, Die];
+type Game = { dice: Dice; round: GameRound };
+
+const isIndex = (index: number): index is 0 | 1 | 2 | 3 | 4 =>
+  [0, 1, 2, 3, 4].includes(index);
+
+const isGameRound = (round: number): round is GameRound =>
+  gameRounds.includes(round);
+
+const initiateDie = (): Die => ({
+  number: dieNumbers[Math.floor(Math.random() * dieNumbers.length)]!,
+  selected: false,
+});
+
+const createGame = (): Game => ({
+  dice: [
+    initiateDie(),
+    initiateDie(),
+    initiateDie(),
+    initiateDie(),
+    initiateDie(),
+  ],
+  round: 1,
+});
+
+const throwDice = (currentDice: Dice) =>
+  currentDice.map((dice) =>
+    dice.selected
+      ? dice
+      : {
+          number: dieNumbers[Math.floor(Math.random() * dieNumbers.length)]!,
+          selected: false,
+        }
+  ) as Dice;
 
 const buttonClass = "bg-lime-600 text-white rounded-md px-2 py-1";
 
@@ -27,7 +64,7 @@ const dieNumberToClass = (number: DieNumber) => {
   }
 };
 
-const die = ({
+const generateDieHtml = ({
   number,
   index,
   selected,
@@ -37,7 +74,11 @@ const die = ({
   selected: boolean;
 }) => `
     <div
-      class="die ${dieNumberToClass(number)} text-4xl leading-6 w-6 flex justify-center ${selected ? "bg-black text-white" : "not-selected"}"
+      class="die ${dieNumberToClass(
+        number
+      )} text-4xl leading-6 w-6 flex justify-center ${
+  selected ? "bg-black text-white" : "not-selected"
+}"
       hx-put="/select/${index}"
       hx-swap="outerHTML"
     >
@@ -56,13 +97,11 @@ const throwDiceButton = (label: string | null = "Throw dice") =>
       </button>`
     : "";
 
-type Die = { number: DieNumber; selected: boolean };
-type Game = { dice: [Die, Die, Die, Die, Die]; round: 1 | 2 | 3 };
 let game: Game | undefined;
 
-const generateDicesHtml = (game: Game) =>
+const generateDiceHtml = (game: Game) =>
   `${game.dice
-    .map(({ number, selected }, index) => die({ number, index, selected }))
+    .map(({ number, selected }, index) => generateDieHtml({ number, index, selected }))
     .join("")}`;
 
 app.get("/", (_, res) => {
@@ -112,36 +151,9 @@ app.post("/reset", (_, res) => {
   res.header("hx-trigger", "event-after-reset").send("");
 });
 
-const generateRandomDieNumber = (): DieNumber =>
-  dieNumbers[Math.floor(Math.random() * dieNumbers.length)]!;
-
-const initiateDie = (): Die => ({
-  number: generateRandomDieNumber(),
-  selected: false,
-});
-
-const throwDice = (currentDice: Game["dice"]) =>
-  currentDice.map((dice) =>
-    dice.selected
-      ? dice
-      : {
-          number: dieNumbers[Math.floor(Math.random() * dieNumbers.length)]!,
-          selected: false,
-        }
-  ) as Game["dice"];
-
 app.put("/throw", (_, res) => {
   if (!game) {
-    game = {
-      dice: [
-        initiateDie(),
-        initiateDie(),
-        initiateDie(),
-        initiateDie(),
-        initiateDie(),
-      ],
-      round: 1,
-    };
+    game = createGame();
   } else {
     const newRound = game.round + 1;
     if (!isGameRound(newRound)) {
@@ -151,7 +163,7 @@ app.put("/throw", (_, res) => {
     game.dice = throwDice(game.dice);
     game.round = newRound;
   }
-  res.header("hx-trigger", "event-after-throw").send(generateDicesHtml(game));
+  res.header("hx-trigger", "event-after-throw").send(generateDiceHtml(game));
 });
 
 app.put("/select/:index", (req, res) => {
@@ -165,14 +177,8 @@ app.put("/select/:index", (req, res) => {
 
   const { number, selected } = game.dice[index];
   game.dice[index] = { ...game.dice[index], selected: !selected };
-  res.send(die({ number, index, selected: !selected }));
+  res.send(generateDieHtml({ number, index, selected: !selected }));
 });
-
-const isIndex = (index: number): index is 0 | 1 | 2 | 3 | 4 =>
-  [0, 1, 2, 3, 4].includes(index);
-
-const isGameRound = (round: number): round is 1 | 2 | 3 =>
-  [1, 2, 3].includes(round);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
