@@ -56,8 +56,6 @@ const throwDiceButton = (label: string | null = "Throw dice") =>
       </button>`
     : "";
 
-const spinner = `<img class="spinner h-7" src="/tail-spin.svg"/>`;
-
 type Die = { number: DieNumber; selected: boolean };
 type Game = { dice: [Die, Die, Die, Die, Die]; round: 1 | 2 | 3 };
 let game: Game | undefined;
@@ -80,7 +78,6 @@ app.get("/", (_, res) => {
       <body class="flex flex-col justify-center items-center h-screen">
         <div id="game" class="flex flex-col gap-4 items-center">
           <div id="dice" class="flex gap-2 bg-green-700 p-6 w-[205px] h-[73px]">
-            ${spinner}
           </div>
           <div class="flex gap-2">
             <div
@@ -110,7 +107,7 @@ app.get("/main-button", (_, res) => {
 
 app.post("/reset", (_, res) => {
   game = undefined;
-  res.header("hx-trigger", "event-after-reset").send(spinner);
+  res.header("hx-trigger", "event-after-reset").send("");
 });
 
 const generateRandomDieNumber = (): DieNumber =>
@@ -152,10 +149,7 @@ app.put("/throw", (_, res) => {
     game.dice = throwDice(game.dice);
     game.round = newRound;
   }
-  res.header("hx-trigger", "event-after-throw").send(`
-    ${generateDicesHtml(game)}
-    ${spinner}
-  `);
+  res.header("hx-trigger", "event-after-throw").send(generateDicesHtml(game));
 });
 
 app.put("/select/:index", (req, res) => {

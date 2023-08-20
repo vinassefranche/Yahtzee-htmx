@@ -5,16 +5,10 @@
 #dice .spinner{
   display:none;
 }
-#dice .die{
-  display:flex;
+#dice.htmx-settling .die:not(.selected)::after{
+  content:'';
+  animation: rolling 0.5s linear infinite;
 }
-#dice.htmx-settling .die{
-  display:none;
-}
-#dice.htmx-settling .spinner{
-  display:inline;
-}
-
 
 .die {
   font-size: 35px;

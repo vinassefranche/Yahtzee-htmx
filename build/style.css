@@ -624,16 +624,9 @@ video {
   display:none;
 }
 
-#dice .die{
-  display:flex;
-}
-
-#dice.htmx-settling .die{
-  display:none;
-}
-
-#dice.htmx-settling .spinner{
-  display:inline;
+#dice.htmx-settling .die:not(.selected)::after{
+  content:'';
+  animation: rolling 0.5s linear infinite;
 }
 
 .die {
