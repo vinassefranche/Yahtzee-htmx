@@ -128,7 +128,7 @@ app.get("/", (_, res) => {
               class="h-8"
               hx-trigger="load, event-after-throw from:body, event-after-reset from:body"
               hx-get="/main-button"
-            ></div>
+            >${throwDiceButton()}</div>
             <button hx-post="/reset" hx-target="#dice" class="bg-red-400 text-white rounded-md px-2 py-1">
               Reset
             </button>
