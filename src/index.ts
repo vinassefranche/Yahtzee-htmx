@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import express from "express";
 
 const app = express();
@@ -97,14 +98,18 @@ const throwDiceButton = (label: string | null = "Throw dice") =>
       </button>`
     : "";
 
-let game: Game | undefined;
+const games: Record<string, Game | null> = {};
 
 const generateDiceHtml = (game: Game) =>
   `${game.dice
-    .map(({ number, selected }, index) => generateDieHtml({ number, index, selected }))
+    .map(({ number, selected }, index) =>
+      generateDieHtml({ number, index, selected })
+    )
     .join("")}`;
 
 app.get("/", (_, res) => {
+  const uuid = randomUUID();
+  games[uuid] = null;
   res.header("Content-Type", "text/html").send(`
     <!DOCTYPE html>
     <html>
@@ -114,7 +119,7 @@ app.get("/", (_, res) => {
         <script src="https://unpkg.com/htmx.org/dist/htmx.js" ></script>
         <link rel="stylesheet" href="/style.css" />
       </head>
-      <body class="flex flex-col justify-center items-center h-screen">
+      <body class="flex flex-col justify-center items-center h-screen" hx-headers='{"game-uuid": "${uuid}"}'>
         <div id="game" class="flex flex-col gap-4 items-center">
           <div id="dice" class="flex gap-2 bg-green-700 p-6 w-[205px] h-[73px]">
           </div>
@@ -134,8 +139,20 @@ app.get("/", (_, res) => {
   `);
 });
 
-app.get("/main-button", (_, res) => {
-  if (!game) {
+const getGameFromReq = (req: express.Request) => {
+  const gameUuid = req.headers["game-uuid"];
+  if (typeof gameUuid !== "string" || !(gameUuid in games)) {
+    return { game: undefined, gameUuid: undefined };
+  }
+  return { game: games[gameUuid], gameUuid };
+};
+
+app.get("/main-button", (req, res) => {
+  const { game } = getGameFromReq(req);
+  if (game === undefined) {
+    return res.status(400).send("Bad request: game not found");
+  }
+  if (game === null) {
     return res.send(throwDiceButton());
   }
 
@@ -146,14 +163,22 @@ app.get("/main-button", (_, res) => {
   return res.send(throwDiceButton("Throw not selected dice"));
 });
 
-app.post("/reset", (_, res) => {
-  game = undefined;
+app.post("/reset", (req, res) => {
+  const { gameUuid } = getGameFromReq(req);
+  if (gameUuid === undefined) {
+    return res.status(400).send("Bad request: game not found");
+  }
+  games[gameUuid] = null;
   res.header("hx-trigger", "event-after-reset").send("");
 });
 
-app.put("/throw", (_, res) => {
-  if (!game) {
-    game = createGame();
+app.put("/throw", (req, res) => {
+  const { game, gameUuid } = getGameFromReq(req);
+  if (game === undefined) {
+    return res.status(400).send("Bad request: game not found");
+  }
+  if (game === null) {
+    games[gameUuid] = createGame();
   } else {
     const newRound = game.round + 1;
     if (!isGameRound(newRound)) {
@@ -163,7 +188,9 @@ app.put("/throw", (_, res) => {
     game.dice = throwDice(game.dice);
     game.round = newRound;
   }
-  res.header("hx-trigger", "event-after-throw").send(generateDiceHtml(game));
+  res
+    .header("hx-trigger", "event-after-throw")
+    .send(generateDiceHtml(games[gameUuid]!));
 });
 
 app.put("/select/:index", (req, res) => {
@@ -171,7 +198,11 @@ app.put("/select/:index", (req, res) => {
   if (isNaN(index) || !isIndex(index)) {
     return res.status(400).send("Bad request");
   }
-  if (!game) {
+  const { game } = getGameFromReq(req);
+  if (game === undefined) {
+    return res.status(400).send("Bad request: game not found");
+  }
+  if (game === null) {
     return res.status(400).send("Game not started");
   }
 
