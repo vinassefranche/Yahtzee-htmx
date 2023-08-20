@@ -57,9 +57,16 @@ const die = ({
 };
 
 const throwDiceButton = (label: string | null = "Throw dice") =>
-  `<div class="h-8">
-    ${label ? `<button hx-put="/throw" hx-target="#game" hx-swap="innerHTML settle:500ms" hx-indicator="#dice" class="${buttonClass}">${label}</button>` : ''}
-  </div>`;
+  label
+    ? `<button
+        hx-put="/throw"
+        hx-target="#dice"
+        hx-swap="innerHTML settle:500ms"
+        hx-indicator="#dice"
+        class="${buttonClass}">
+          ${label}
+      </button>`
+    : "";
 
 const spinner = `<img class="spinner h-7" src="/tail-spin.svg"/>`;
 
@@ -87,22 +94,34 @@ app.get("/", (_, res) => {
           <div id="dice" class="flex gap-2 h-7">
             ${spinner}
           </div>
-          ${throwDiceButton()}
+          <div 
+            class="h-8"
+            id="throw-dice-button-container"
+            hx-trigger="load, event-after-throw"
+            hx-get="/main-button"
+          />
         </div>
-        <button hx-post="/reset" hx-target="#game" class="bg-red-400 text-white rounded-md px-2 py-1 mt-5">Reset</button>
+        <button hx-post="/reset" hx-target="#dice" class="bg-red-400 text-white rounded-md px-2 py-1 mt-5">Reset</button>
       </body>
     </html>
   `);
 });
 
+app.get("/main-button", (_, res) => {
+  if (!game) {
+    return res.send(throwDiceButton());
+  }
+
+  const { round } = game;
+  if (round === 3) {
+    return res.send("");
+  }
+  return res.send(throwDiceButton("Throw not selected dice"));
+});
+
 app.post("/reset", (_, res) => {
   game = undefined;
-  res.header("Content-Type", "text/html").send(`
-    <div id="dice" class="flex gap-2 h-7">
-      ${spinner}
-    </div>
-    ${throwDiceButton()}
-  `);
+  res.send(spinner);
 });
 
 const generateRandomDieNumber = (): DieNumber =>
@@ -154,12 +173,9 @@ app.put("/throw", (_, res) => {
     game.dice = throwDice(game.dice);
     game.round = newRound;
   }
-  res.header("Content-Type", "text/html").send(`
-    <div id="dice" class="flex gap-2 h-7">
+  res.header("hx-trigger-after-swap", "event-after-throw").send(`
       ${generateDicesHtml(game)}
       ${spinner}
-    </div>
-    ${throwDiceButton(game.round !== 3 ? "Throw not selected dice" : null)}
   `);
 });
 
@@ -174,9 +190,7 @@ app.put("/select/:index", (req, res) => {
 
   const { number, selected } = game.dice[index];
   game.dice[index] = { ...game.dice[index], selected: !selected };
-  res
-    .header("Content-Type", "text/html")
-    .send(die({ number, index, selected: !selected }));
+  res.send(die({ number, index, selected: !selected }));
 });
 
 const isIndex = (index: number): index is 0 | 1 | 2 | 3 | 4 =>
