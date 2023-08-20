@@ -542,10 +542,6 @@ video {
   display: flex;
 }
 
-.h-7 {
-  height: 1.75rem;
-}
-
 .h-8 {
   height: 2rem;
 }
@@ -556,6 +552,10 @@ video {
 
 .h-screen {
   height: 100vh;
+}
+
+.w-6 {
+  width: 1.5rem;
 }
 
 .w-\[205px\] {
@@ -584,6 +584,11 @@ video {
 
 .rounded-md {
   border-radius: 0.375rem;
+}
+
+.bg-black {
+  --tw-bg-opacity: 1;
+  background-color: rgb(0 0 0 / var(--tw-bg-opacity));
 }
 
 .bg-green-700 {
@@ -615,32 +620,23 @@ video {
   padding-bottom: 0.25rem;
 }
 
+.text-4xl {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+}
+
+.leading-6 {
+  line-height: 1.5rem;
+}
+
 .text-white {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity));
 }
 
-#dice .spinner{
-  display:none;
-}
-
-#dice.htmx-settling .die:not(.selected)::after{
+#dice.htmx-settling .die.not-selected::after{
   content:'';
   animation: rolling 0.5s linear infinite;
-}
-
-.die {
-  font-size: 35px;
-  font-weight: 500;
-  line-height: 25px;
-  width: 25px;
-  display: flex;
-  justify-content: center;
-}
-
-.die.selected {
-  background-color: black;
-  color: white;
 }
 
 .die.rolling::after {

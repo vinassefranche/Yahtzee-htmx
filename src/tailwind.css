@@ -2,26 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-#dice .spinner{
-  display:none;
-}
-#dice.htmx-settling .die:not(.selected)::after{
+#dice.htmx-settling .die.not-selected::after{
   content:'';
   animation: rolling 0.5s linear infinite;
-}
-
-.die {
-  font-size: 35px;
-  font-weight: 500;
-  line-height: 25px;
-  width: 25px;
-  display: flex;
-  justify-content: center;
-}
-
-.die.selected {
-  background-color: black;
-  color: white;
 }
 
 .die.rolling::after {

@@ -37,7 +37,7 @@ const die = ({
   selected: boolean;
 }) => `
     <div
-      class="die ${selected ? "selected" : ""} ${dieNumberToClass(number)}"
+      class="die ${dieNumberToClass(number)} text-4xl leading-6 w-6 flex justify-center ${selected ? "bg-black text-white" : "not-selected"}"
       hx-put="/select/${index}"
       hx-swap="outerHTML"
     >
@@ -85,7 +85,9 @@ app.get("/", (_, res) => {
               hx-trigger="load, event-after-throw from:body, event-after-reset from:body"
               hx-get="/main-button"
             ></div>
-            <button hx-post="/reset" hx-target="#dice" class="bg-red-400 text-white rounded-md px-2 py-1">Reset</button>
+            <button hx-post="/reset" hx-target="#dice" class="bg-red-400 text-white rounded-md px-2 py-1">
+              Reset
+            </button>
           </div>
         </div>
       </body>
