@@ -468,7 +468,7 @@ app.put("/throw", (req, res) => {
     game.round = newRound as GameWithDice["round"];
   }
   res
-    .header("hx-trigger", "dice-thrown")
+    .header("hx-trigger-after-settle", "dice-thrown")
     .send(generateDiceHtml(games[gameUuid] as GameWithDice));
 });
 
