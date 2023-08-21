@@ -273,7 +273,7 @@ app.get("/", (_, res) => {
       <body class="flex flex-col gap-4 pt-24 items-center h-screen" hx-headers='{"game-uuid": "${uuid}"}'>
         <div
           hx-get="/score"
-          hx-trigger="load, event-after-reset from:body, score-updated from:body"
+          hx-trigger="load, game-reset from:body, score-updated from:body"
           class="flex flex-col gap-2 items-center"
         ></div>
         <div id="game" class="flex flex-col gap-6 items-center">
@@ -282,7 +282,7 @@ app.get("/", (_, res) => {
           <div class="flex gap-2">
             <div
               class="h-8"
-              hx-trigger="load, event-after-throw from:body, event-after-reset from:body, score-updated from:body"
+              hx-trigger="load, dice-thrown from:body, game-reset from:body, score-updated from:body"
               hx-get="/main-button"
             >${throwDiceButton()}</div>
             <button hx-post="/reset" hx-target="#dice" class="bg-red-400 text-white rounded-md px-2 py-1">
@@ -292,7 +292,7 @@ app.get("/", (_, res) => {
         </div>
         <div
           hx-get="/score-options"
-          hx-trigger="load, event-after-throw from:body, event-after-reset from:body, score-updated from:body"
+          hx-trigger="load, dice-thrown from:body, game-reset from:body, score-updated from:body"
           class="flex flex-col gap-2 items-center"
         ></div>
       </body>
@@ -330,7 +330,7 @@ app.post("/reset", (req, res) => {
     return res.status(400).send("Bad request: game not found");
   }
   games[gameUuid] = createGame();
-  res.header("hx-trigger", "event-after-reset").send("");
+  res.header("hx-trigger", "game-reset").send("");
 });
 
 app.get("/score-options", (req, res) => {
@@ -471,7 +471,7 @@ app.put("/throw", (req, res) => {
     game.round = newRound as GameWithDice["round"];
   }
   res
-    .header("hx-trigger", "event-after-throw")
+    .header("hx-trigger", "dice-thrown")
     .send(generateDiceHtml(games[gameUuid] as GameWithDice));
 });
 
