@@ -197,6 +197,23 @@ const getScoreOptions = (game: GameWithDice) =>
     }))
     .filter(({ scoreOption }) => game.score[scoreOption] === null);
 
+const scoreLabels: Record<ScoreOption | "bonus", string> = {
+  ones: "Ones",
+  twos: "Twos",
+  threes: "Threes",
+  fours: "Fours",
+  fives: "Fives",
+  sixes: "Sixes",
+  threeOfAKind: "Three of a kind",
+  fourOfAKind: "Four of a kind",
+  fullHouse: "Full house",
+  smallStraight: "Small straight",
+  largeStraight: "Large straight",
+  yams: "Yams",
+  chance: "Chance",
+  bonus: "Bonus (if more than 62)",
+};
+
 const buttonClass = "bg-lime-600 text-white rounded-md px-2 py-1";
 
 const dieNumberToClass = (number: DieNumber) => {
@@ -354,7 +371,7 @@ app.get("/score-options", (req, res) => {
               hx-put="/score/${scoreOption}"
               hx-target="#dice"
             >
-              ${scoreOption} (${score})
+              ${scoreLabels[scoreOption]} (${score})
             </button>`
         )
         .join("")}
@@ -392,64 +409,39 @@ app.get("/score", (req, res) => {
   if (game === undefined) {
     return res.status(400).send("Bad request: game not found");
   }
+  const scoreTable = [
+    ["ones", "threeOfAKind"],
+    ["twos", "fourOfAKind"],
+    ["threes", "fullHouse"],
+    ["fours", "smallStraight"],
+    ["fives", "largeStraight"],
+    ["sixes", "yams"],
+    ["bonus", "chance"],
+  ] as const satisfies ReadonlyArray<
+    readonly [ScoreOption | "bonus", ScoreOption]
+  >;
+  const commonCellClass = "p-1 border border-solid border-black";
   res.send(`
-    <div class="grid grid-cols-4">
-      <div class="p-1 border border-solid border-black">Ones</div>
-      <div class="p-1 border border-solid border-black border-l-0">${
-        game?.score.ones ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-l-0">Three of a kind</div>
-      <div class="p-1 border border-solid border-black border-l-0">${
-        game?.score.threeOfAKind ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-t-0">Twos</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.twos ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">Four of a kind</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.fourOfAKind ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-t-0">Threes</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.threes ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">Full house</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.fullHouse ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-t-0">Fours</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.fours ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">Small straight</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.smallStraight ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-t-0">Fives</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.fives ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">Large straight</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.largeStraight ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-t-0">Sixes</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.sixes ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">Yams</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.yams ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-t-0">Bonus (if more than 62)</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.bonus ?? ""
-      }</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">Chance</div>
-      <div class="p-1 border border-solid border-black border-l-0 border-t-0">${
-        game?.score.chance ?? ""
-      }</div>
+  <div class="grid grid-cols-4">
+    ${scoreTable
+      .map(([scoreOption1, scoreOption2], index) => {
+        const optionalTopBorder = index === 0 ? "" : "border-t-0";
+        return `
+          <div class="${commonCellClass} ${optionalTopBorder}">${
+          scoreLabels[scoreOption1]
+        }</div>
+          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
+          game.score[scoreOption1] ?? ""
+        }</div>
+          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
+          scoreLabels[scoreOption2]
+        }</div>
+          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
+          game.score[scoreOption2] ?? ""
+        }</div>
+        `;
+      })
+      .join("")}
     </div>
   `);
 });
