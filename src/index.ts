@@ -275,9 +275,48 @@ const generateDiceHtml = (game: GameWithDice) =>
     )
     .join("")}`;
 
+const generateScoreHtml = (game: Game) => {
+  const scoreTable = [
+    ["ones", "threeOfAKind"],
+    ["twos", "fourOfAKind"],
+    ["threes", "fullHouse"],
+    ["fours", "smallStraight"],
+    ["fives", "largeStraight"],
+    ["sixes", "yams"],
+    ["bonus", "chance"],
+  ] as const satisfies ReadonlyArray<
+    readonly [ScoreOption | "bonus", ScoreOption]
+  >;
+  const commonCellClass = "p-1 border border-solid border-black";
+  return `
+  <div class="grid grid-cols-4">
+    ${scoreTable
+      .map(([scoreOption1, scoreOption2], index) => {
+        const optionalTopBorder = index === 0 ? "" : "border-t-0";
+        return `
+          <div class="${commonCellClass} ${optionalTopBorder}">${
+          scoreLabels[scoreOption1]
+        }</div>
+          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
+          game.score[scoreOption1] ?? ""
+        }</div>
+          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
+          scoreLabels[scoreOption2]
+        }</div>
+          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
+          game.score[scoreOption2] ?? ""
+        }</div>
+        `;
+      })
+      .join("")}
+    </div>
+  `;
+}
+
 app.get("/", (_, res) => {
   const uuid = randomUUID();
-  games[uuid] = createGame();
+  const game = createGame();
+  games[uuid] = game;
   res.header("Content-Type", "text/html").send(`
     <!DOCTYPE html>
     <html>
@@ -292,7 +331,7 @@ app.get("/", (_, res) => {
           hx-get="/score"
           hx-trigger="load, game-reset from:body, score-updated from:body"
           class="flex flex-col gap-2 items-center"
-        ></div>
+        >${generateScoreHtml(game)}</div>
         <div id="game" class="flex flex-col gap-6 items-center">
           <div id="dice" class="flex gap-2 bg-green-700 p-6 w-[205px] h-[73px]">
           </div>
@@ -409,41 +448,7 @@ app.get("/score", (req, res) => {
   if (game === undefined) {
     return res.status(400).send("Bad request: game not found");
   }
-  const scoreTable = [
-    ["ones", "threeOfAKind"],
-    ["twos", "fourOfAKind"],
-    ["threes", "fullHouse"],
-    ["fours", "smallStraight"],
-    ["fives", "largeStraight"],
-    ["sixes", "yams"],
-    ["bonus", "chance"],
-  ] as const satisfies ReadonlyArray<
-    readonly [ScoreOption | "bonus", ScoreOption]
-  >;
-  const commonCellClass = "p-1 border border-solid border-black";
-  res.send(`
-  <div class="grid grid-cols-4">
-    ${scoreTable
-      .map(([scoreOption1, scoreOption2], index) => {
-        const optionalTopBorder = index === 0 ? "" : "border-t-0";
-        return `
-          <div class="${commonCellClass} ${optionalTopBorder}">${
-          scoreLabels[scoreOption1]
-        }</div>
-          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
-          game.score[scoreOption1] ?? ""
-        }</div>
-          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
-          scoreLabels[scoreOption2]
-        }</div>
-          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
-          game.score[scoreOption2] ?? ""
-        }</div>
-        `;
-      })
-      .join("")}
-    </div>
-  `);
+  res.send(generateScoreHtml(game));
 });
 
 app.put("/throw", (req, res) => {
