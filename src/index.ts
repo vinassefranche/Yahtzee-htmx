@@ -44,11 +44,16 @@ const isEligibleForBonus = (score: Score) => {
 
 const addScore =
   ({ dice, scoreOption }: { dice: Dice; scoreOption: ScoreOption }) =>
-  (score: Score): Score => ({
-    ...score,
-    [scoreOption]: getScoreForScoreOption({ dice, scoreOption }),
-    bonus: score.bonus === null && isEligibleForBonus(score) ? 35 : null,
-  });
+  (score: Score): Score => {
+    const newScore = {
+      ...score,
+      [scoreOption]: getScoreForScoreOption({ dice, scoreOption }),
+    };
+    if (newScore.bonus === null && isEligibleForBonus(newScore) ? 35 : null) {
+      newScore.bonus = 35;
+    }
+    return newScore;
+  };
 
 const isScoreOptions = (string: string): string is ScoreOption =>
   scoreOptions.includes(string as ScoreOption);
@@ -311,7 +316,7 @@ const generateScoreHtml = (game: Game) => {
       .join("")}
     </div>
   `;
-}
+};
 
 app.get("/", (_, res) => {
   const uuid = randomUUID();
