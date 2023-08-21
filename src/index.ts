@@ -8,10 +8,11 @@ app.use(express.static("build"));
 
 const dieNumbers = [1, 2, 3, 4, 5, 6] as const;
 type DieNumber = (typeof dieNumbers)[number];
-const gameRounds = [1, 2, 3];
+const gameRounds = [0, 1, 2, 3] as const;
 type GameRound = (typeof gameRounds)[number];
 type Die = { number: DieNumber; selected: boolean };
 type Dice = [Die, Die, Die, Die, Die];
+
 const scoreOptions = [
   "ones",
   "twos",
@@ -29,31 +30,59 @@ const scoreOptions = [
 ] as const;
 type ScoreOption = (typeof scoreOptions)[number];
 type Score = Record<ScoreOption | "bonus", number | null>;
-type Game = { dice: Dice; round: GameRound; score: Score };
+
+const isEligibleForBonus = (score: Score) => {
+  const sumOfNumbers =
+    (score.ones ?? 0) +
+    (score.twos ?? 0) +
+    (score.threes ?? 0) +
+    (score.fours ?? 0) +
+    (score.fives ?? 0) +
+    (score.sixes ?? 0);
+  return sumOfNumbers >= 62;
+};
+
+const addScore =
+  ({ dice, scoreOption }: { dice: Dice; scoreOption: ScoreOption }) =>
+  (score: Score): Score => ({
+    ...score,
+    [scoreOption]: getScoreForScoreOption({ dice, scoreOption }),
+    bonus: score.bonus === null && isEligibleForBonus(score) ? 35 : null,
+  });
+
+const isScoreOptions = (string: string): string is ScoreOption =>
+  scoreOptions.includes(string as ScoreOption);
+
+type GameWithoutDice = {
+  dice: null;
+  round: Extract<GameRound, 0>;
+  score: Score;
+};
+type GameWithDice = {
+  dice: Dice;
+  round: Exclude<GameRound, 0>;
+  score: Score;
+};
+type Game = GameWithDice | GameWithoutDice;
+
+const isGameWithDice = (game: Game): game is GameWithDice => game.dice !== null;
 
 const isIndex = (index: number): index is 0 | 1 | 2 | 3 | 4 =>
   [0, 1, 2, 3, 4].includes(index);
 
 const isGameRound = (round: number): round is GameRound =>
-  gameRounds.includes(round);
+  gameRounds.includes(round as GameRound);
 
-const isScoreOptions = (string: string): string is ScoreOption =>
-  scoreOptions.includes(string as ScoreOption);
-
-const initiateDie = (): Die => ({
-  number: dieNumbers[Math.floor(Math.random() * dieNumbers.length)]!,
+const getRandomDieNumber = (): DieNumber =>
+  dieNumbers[Math.floor(Math.random() * dieNumbers.length)]!;
+const initializeDie = (): Die => ({
+  number: getRandomDieNumber(),
   selected: false,
 });
 
 const createGame = (): Game => ({
-  dice: [
-    initiateDie(),
-    initiateDie(),
-    initiateDie(),
-    initiateDie(),
-    initiateDie(),
-  ],
-  round: 1,
+  dice: null,
+  round: 0,
   score: scoreOptions.reduce(
     (acc, scoreOption) => {
       acc[scoreOption] = null;
@@ -63,12 +92,24 @@ const createGame = (): Game => ({
   ),
 });
 
+const startRound1 = (game: Game): Game => ({
+  dice: [
+    initializeDie(),
+    initializeDie(),
+    initializeDie(),
+    initializeDie(),
+    initializeDie(),
+  ],
+  round: 1,
+  score: game.score,
+});
+
 const throwDice = (currentDice: Dice) =>
   currentDice.map((dice) =>
     dice.selected
       ? dice
       : {
-          number: dieNumbers[Math.floor(Math.random() * dieNumbers.length)]!,
+          number: getRandomDieNumber(),
           selected: false,
         }
   ) as Dice;
@@ -88,33 +129,33 @@ const getNumberOfEachNumber = (dice: Dice) => {
 };
 
 const getScoreForScoreOption = ({
-  game,
+  dice,
   scoreOption,
 }: {
-  game: Game;
+  dice: Dice;
   scoreOption: ScoreOption;
 }) => {
-  const numberOfEachNumber = getNumberOfEachNumber(game.dice);
+  const numberOfEachNumber = getNumberOfEachNumber(dice);
   switch (scoreOption) {
     case "ones":
-      return sumSameNumber({ dice: game.dice, number: 1 });
+      return sumSameNumber({ dice, number: 1 });
     case "twos":
-      return sumSameNumber({ dice: game.dice, number: 2 });
+      return sumSameNumber({ dice, number: 2 });
     case "threes":
-      return sumSameNumber({ dice: game.dice, number: 3 });
+      return sumSameNumber({ dice, number: 3 });
     case "fours":
-      return sumSameNumber({ dice: game.dice, number: 4 });
+      return sumSameNumber({ dice, number: 4 });
     case "fives":
-      return sumSameNumber({ dice: game.dice, number: 5 });
+      return sumSameNumber({ dice, number: 5 });
     case "sixes":
-      return sumSameNumber({ dice: game.dice, number: 6 });
+      return sumSameNumber({ dice, number: 6 });
     case "threeOfAKind":
       return numberOfEachNumber.some((number) => number >= 3)
-        ? sumAllDice(game.dice)
+        ? sumAllDice(dice)
         : 0;
     case "fourOfAKind":
       return numberOfEachNumber.some((number) => number >= 4)
-        ? sumAllDice(game.dice)
+        ? sumAllDice(dice)
         : 0;
     case "fullHouse":
       return numberOfEachNumber.some((number) => number === 3) &&
@@ -122,37 +163,39 @@ const getScoreForScoreOption = ({
         ? 25
         : 0;
     case "smallStraight":
-      return game.dice.some((die) => die.number === 3) &&
-        game.dice.some((die) => die.number === 4) &&
-        ((game.dice.some((die) => die.number === 1) &&
-          game.dice.some((die) => die.number === 2)) ||
-          (game.dice.some((die) => die.number === 2) &&
-            game.dice.some((die) => die.number === 5)) ||
-          (game.dice.some((die) => die.number === 5) &&
-            game.dice.some((die) => die.number === 6)))
+      return dice.some((die) => die.number === 3) &&
+        dice.some((die) => die.number === 4) &&
+        ((dice.some((die) => die.number === 1) &&
+          dice.some((die) => die.number === 2)) ||
+          (dice.some((die) => die.number === 2) &&
+            dice.some((die) => die.number === 5)) ||
+          (dice.some((die) => die.number === 5) &&
+            dice.some((die) => die.number === 6)))
         ? 30
         : 0;
     case "largeStraight":
-      return game.dice.some((die) => die.number === 2) &&
-        game.dice.some((die) => die.number === 3) &&
-        game.dice.some((die) => die.number === 4) &&
-        game.dice.some((die) => die.number === 5) &&
-        (game.dice.some((die) => die.number === 1) ||
-          game.dice.some((die) => die.number === 6))
+      return dice.some((die) => die.number === 2) &&
+        dice.some((die) => die.number === 3) &&
+        dice.some((die) => die.number === 4) &&
+        dice.some((die) => die.number === 5) &&
+        (dice.some((die) => die.number === 1) ||
+          dice.some((die) => die.number === 6))
         ? 40
         : 0;
     case "yams":
       return numberOfEachNumber.some((number) => number === 5) ? 50 : 0;
     case "chance":
-      return sumAllDice(game.dice);
+      return sumAllDice(dice);
   }
 };
 
-const getScoreOptions = (game: Game) =>
-  scoreOptions.map((scoreOption) => ({
-    scoreOption,
-    score: getScoreForScoreOption({ game, scoreOption }),
-  }));
+const getScoreOptions = (game: GameWithDice) =>
+  scoreOptions
+    .map((scoreOption) => ({
+      scoreOption,
+      score: getScoreForScoreOption({ dice: game.dice, scoreOption }),
+    }))
+    .filter(({ scoreOption }) => game.score[scoreOption] === null);
 
 const buttonClass = "bg-lime-600 text-white rounded-md px-2 py-1";
 
@@ -206,9 +249,9 @@ const throwDiceButton = (label: string | null = "Throw dice") =>
       </button>`
     : "";
 
-const games: Record<string, Game | null> = {};
+const games: Record<string, Game> = {};
 
-const generateDiceHtml = (game: Game) =>
+const generateDiceHtml = (game: GameWithDice) =>
   `${game.dice
     .map(({ number, selected }, index) =>
       generateDieHtml({ number, index, selected })
@@ -217,7 +260,7 @@ const generateDiceHtml = (game: Game) =>
 
 app.get("/", (_, res) => {
   const uuid = randomUUID();
-  games[uuid] = null;
+  games[uuid] = createGame();
   res.header("Content-Type", "text/html").send(`
     <!DOCTYPE html>
     <html>
@@ -230,7 +273,7 @@ app.get("/", (_, res) => {
       <body class="flex flex-col gap-4 pt-24 items-center h-screen" hx-headers='{"game-uuid": "${uuid}"}'>
         <div
           hx-get="/score"
-          hx-trigger="load, event-after-reset from:body"
+          hx-trigger="load, event-after-reset from:body, score-updated from:body"
           class="flex flex-col gap-2 items-center"
         ></div>
         <div id="game" class="flex flex-col gap-6 items-center">
@@ -239,7 +282,7 @@ app.get("/", (_, res) => {
           <div class="flex gap-2">
             <div
               class="h-8"
-              hx-trigger="load, event-after-throw from:body, event-after-reset from:body"
+              hx-trigger="load, event-after-throw from:body, event-after-reset from:body, score-updated from:body"
               hx-get="/main-button"
             >${throwDiceButton()}</div>
             <button hx-post="/reset" hx-target="#dice" class="bg-red-400 text-white rounded-md px-2 py-1">
@@ -249,7 +292,7 @@ app.get("/", (_, res) => {
         </div>
         <div
           hx-get="/score-options"
-          hx-trigger="load, event-after-throw from:body, event-after-reset from:body"
+          hx-trigger="load, event-after-throw from:body, event-after-reset from:body, score-updated from:body"
           class="flex flex-col gap-2 items-center"
         ></div>
       </body>
@@ -270,7 +313,7 @@ app.get("/main-button", (req, res) => {
   if (game === undefined) {
     return res.status(400).send("Bad request: game not found");
   }
-  if (game === null) {
+  if (!isGameWithDice(game)) {
     return res.send(throwDiceButton());
   }
 
@@ -286,7 +329,7 @@ app.post("/reset", (req, res) => {
   if (gameUuid === undefined) {
     return res.status(400).send("Bad request: game not found");
   }
-  games[gameUuid] = null;
+  games[gameUuid] = createGame();
   res.header("hx-trigger", "event-after-reset").send("");
 });
 
@@ -295,7 +338,7 @@ app.get("/score-options", (req, res) => {
   if (game === undefined) {
     return res.status(400).send("Bad request: game not found");
   }
-  if (game === null) {
+  if (!isGameWithDice(game)) {
     return res.send("");
   }
   const scoreOptions = getScoreOptions(game);
@@ -303,8 +346,16 @@ app.get("/score-options", (req, res) => {
     <div class="grid grid-cols-4 gap-2">
       ${scoreOptions
         .map(
-          (scoreOption) =>
-            `<button class="bg-cyan-500 text-white rounded-md px-2 py-1">${scoreOption.scoreOption} (${scoreOption.score})</button>`
+          ({ score, scoreOption }) =>
+            `<button
+              class="${
+                score === 0 ? "bg-gray-500" : "bg-cyan-500"
+              } text-white rounded-md px-2 py-1"
+              hx-put="/score/${scoreOption}"
+              hx-target="#dice"
+            >
+              ${scoreOption} (${score})
+            </button>`
         )
         .join("")}
     </div>
@@ -312,12 +363,12 @@ app.get("/score-options", (req, res) => {
 });
 
 app.put("/score/:scoreOption", (req, res) => {
-  const { game } = getGameFromReq(req);
+  const { game, gameUuid } = getGameFromReq(req);
   if (game === undefined) {
     return res.status(400).send("Bad request: game not found");
   }
-  if (game === null) {
-    return res.status(400).send("Bad request: game not started");
+  if (!isGameWithDice(game)) {
+    return res.status(400).send("Bad request: dice not thrown");
   }
   const { scoreOption } = req.params;
   if (!isScoreOptions(scoreOption)) {
@@ -328,7 +379,12 @@ app.put("/score/:scoreOption", (req, res) => {
   if (game.score[scoreOption] !== null) {
     return res.status(400).send("Bad request: score already set");
   }
-  game.score[scoreOption] = getScoreForScoreOption({ game, scoreOption });
+  games[gameUuid] = {
+    dice: null,
+    round: 0,
+    score: addScore({ dice: game.dice, scoreOption })(game.score),
+  };
+  res.header("hx-trigger", "score-updated").send("");
 });
 
 app.get("/score", (req, res) => {
@@ -403,8 +459,8 @@ app.put("/throw", (req, res) => {
   if (game === undefined) {
     return res.status(400).send("Bad request: game not found");
   }
-  if (game === null) {
-    games[gameUuid] = createGame();
+  if (!isGameWithDice(game)) {
+    games[gameUuid] = startRound1(game);
   } else {
     const newRound = game.round + 1;
     if (!isGameRound(newRound)) {
@@ -412,11 +468,11 @@ app.put("/throw", (req, res) => {
     }
 
     game.dice = throwDice(game.dice);
-    game.round = newRound;
+    game.round = newRound as GameWithDice["round"];
   }
   res
     .header("hx-trigger", "event-after-throw")
-    .send(generateDiceHtml(games[gameUuid]!));
+    .send(generateDiceHtml(games[gameUuid] as GameWithDice));
 });
 
 app.put("/select/:index", (req, res) => {
@@ -428,8 +484,8 @@ app.put("/select/:index", (req, res) => {
   if (game === undefined) {
     return res.status(400).send("Bad request: game not found");
   }
-  if (game === null) {
-    return res.status(400).send("Game not started");
+  if (!isGameWithDice(game)) {
+    return res.status(400).send("Bad request: dice not thrown");
   }
 
   const { number, selected } = game.dice[index];
