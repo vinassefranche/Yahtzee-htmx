@@ -13,7 +13,7 @@ type GameRound = (typeof gameRounds)[number];
 type Die = { number: DieNumber; selected: boolean };
 type Dice = [Die, Die, Die, Die, Die];
 
-const scoreOptions = [
+const scoreTypes = [
   "ones",
   "twos",
   "threes",
@@ -28,8 +28,8 @@ const scoreOptions = [
   "yams",
   "chance",
 ] as const;
-type ScoreOption = (typeof scoreOptions)[number];
-type Score = Record<ScoreOption | "bonus", number | null>;
+type ScoreType = (typeof scoreTypes)[number];
+type Score = Record<ScoreType | "bonus", number | null>;
 
 const isEligibleForBonus = (score: Score) => {
   const sumOfNumbers =
@@ -43,11 +43,11 @@ const isEligibleForBonus = (score: Score) => {
 };
 
 const addScore =
-  ({ dice, scoreOption }: { dice: Dice; scoreOption: ScoreOption }) =>
+  ({ dice, scoreType }: { dice: Dice; scoreType: ScoreType }) =>
   (score: Score): Score => {
     const newScore = {
       ...score,
-      [scoreOption]: getScoreForScoreOption({ dice, scoreOption }),
+      [scoreType]: getScoreForScoreType({ dice, scoreType: scoreType }),
     };
     if (newScore.bonus === null && isEligibleForBonus(newScore) ? 35 : null) {
       newScore.bonus = 35;
@@ -55,8 +55,8 @@ const addScore =
     return newScore;
   };
 
-const isScoreOptions = (string: string): string is ScoreOption =>
-  scoreOptions.includes(string as ScoreOption);
+const isScoreType = (string: string): string is ScoreType =>
+  scoreTypes.includes(string as ScoreType);
 
 type GameWithoutDice = {
   dice: null;
@@ -88,9 +88,9 @@ const initializeDie = (): Die => ({
 const createGame = (): Game => ({
   dice: null,
   round: 0,
-  score: scoreOptions.reduce(
-    (acc, scoreOption) => {
-      acc[scoreOption] = null;
+  score: scoreTypes.reduce(
+    (acc, scoreType) => {
+      acc[scoreType] = null;
       return acc;
     },
     { bonus: null } as Score
@@ -133,15 +133,15 @@ const getNumberOfEachNumber = (dice: Dice) => {
   return numberOfEachNumber;
 };
 
-const getScoreForScoreOption = ({
+const getScoreForScoreType = ({
   dice,
-  scoreOption,
+  scoreType,
 }: {
   dice: Dice;
-  scoreOption: ScoreOption;
+  scoreType: ScoreType;
 }) => {
   const numberOfEachNumber = getNumberOfEachNumber(dice);
-  switch (scoreOption) {
+  switch (scoreType) {
     case "ones":
       return sumSameNumber({ dice, number: 1 });
     case "twos":
@@ -195,14 +195,14 @@ const getScoreForScoreOption = ({
 };
 
 const getScoreOptions = (game: GameWithDice) =>
-  scoreOptions
-    .map((scoreOption) => ({
-      scoreOption,
-      score: getScoreForScoreOption({ dice: game.dice, scoreOption }),
+  scoreTypes
+    .map((scoreType) => ({
+      scoreType,
+      score: getScoreForScoreType({ dice: game.dice, scoreType }),
     }))
-    .filter(({ scoreOption }) => game.score[scoreOption] === null);
+    .filter(({ scoreType }) => game.score[scoreType] === null);
 
-const scoreLabels: Record<ScoreOption | "bonus", string> = {
+const scoreLabels: Record<ScoreType | "bonus", string> = {
   ones: "Ones",
   twos: "Twos",
   threes: "Threes",
@@ -290,26 +290,26 @@ const generateScoreHtml = (game: Game) => {
     ["sixes", "yams"],
     ["bonus", "chance"],
   ] as const satisfies ReadonlyArray<
-    readonly [ScoreOption | "bonus", ScoreOption]
+    readonly [ScoreType | "bonus", ScoreType]
   >;
   const commonCellClass = "p-1 border border-solid border-black";
   return `
   <div class="grid grid-cols-4">
     ${scoreTable
-      .map(([scoreOption1, scoreOption2], index) => {
+      .map(([scoreType1, scoreType2], index) => {
         const optionalTopBorder = index === 0 ? "" : "border-t-0";
         return `
           <div class="${commonCellClass} ${optionalTopBorder}">${
-          scoreLabels[scoreOption1]
+          scoreLabels[scoreType1]
         }</div>
           <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
-          game.score[scoreOption1] ?? ""
+          game.score[scoreType1] ?? ""
         }</div>
           <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
-          scoreLabels[scoreOption2]
+          scoreLabels[scoreType2]
         }</div>
           <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
-          game.score[scoreOption2] ?? ""
+          game.score[scoreType2] ?? ""
         }</div>
         `;
       })
@@ -407,15 +407,15 @@ app.get("/score-options", (req, res) => {
     <div class="grid grid-cols-4 gap-2">
       ${scoreOptions
         .map(
-          ({ score, scoreOption }) =>
+          ({ score, scoreType }) =>
             `<button
               class="${
                 score === 0 ? "bg-gray-500" : "bg-cyan-500"
               } text-white rounded-md px-2 py-1"
-              hx-put="/score/${scoreOption}"
+              hx-put="/score/${scoreType}"
               hx-target="#dice"
             >
-              ${scoreLabels[scoreOption]} (${score})
+              ${scoreLabels[scoreType]} (${score})
             </button>`
         )
         .join("")}
@@ -423,7 +423,7 @@ app.get("/score-options", (req, res) => {
   `);
 });
 
-app.put("/score/:scoreOption", (req, res) => {
+app.put("/score/:scoreType", (req, res) => {
   const { game, gameUuid } = getGameFromReq(req);
   if (game === undefined) {
     return res.status(400).send("Bad request: game not found");
@@ -431,19 +431,19 @@ app.put("/score/:scoreOption", (req, res) => {
   if (!isGameWithDice(game)) {
     return res.status(400).send("Bad request: dice not thrown");
   }
-  const { scoreOption } = req.params;
-  if (!isScoreOptions(scoreOption)) {
+  const { scoreType } = req.params;
+  if (!isScoreType(scoreType)) {
     return res
       .status(400)
-      .send("Bad request: given scoreOption is not a valid one");
+      .send("Bad request: given scoreType is not a valid one");
   }
-  if (game.score[scoreOption] !== null) {
+  if (game.score[scoreType] !== null) {
     return res.status(400).send("Bad request: score already set");
   }
   games[gameUuid] = {
     dice: null,
     round: 0,
-    score: addScore({ dice: game.dice, scoreOption })(game.score),
+    score: addScore({ dice: game.dice, scoreType })(game.score),
   };
   res.header("hx-trigger", "score-updated").send("");
 });
