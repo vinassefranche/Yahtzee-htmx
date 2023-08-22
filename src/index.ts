@@ -43,20 +43,12 @@ const dieNumberToClass = (number: Die.DieNumber) => {
   }
 };
 
-const generateDieHtml = ({
-  number,
-  index,
-  selected,
-}: {
-  number: Die.DieNumber;
-  index: number;
-  selected: boolean;
-}) => `
+const generateDieHtml = ({ die, index }: { die: Die.Die; index: number }) => `
     <div
       class="die ${dieNumberToClass(
-        number
+        die.number
       )} text-4xl leading-6 w-6 flex justify-center ${
-  selected ? "bg-black text-white" : "not-selected"
+  die.selected ? "bg-black text-white" : "not-selected"
 }"
       hx-put="/select/${index}"
       hx-swap="outerHTML"
@@ -79,11 +71,7 @@ const throwDiceButton = (label: string | null = "Throw dice") =>
 const games: Record<string, Game.Game> = {};
 
 const generateDiceHtml = (dice: Dice.Dice) =>
-  `${dice
-    .map(({ number, selected }, index) =>
-      generateDieHtml({ number, index, selected })
-    )
-    .join("")}`;
+  `${dice.map((die, index) => generateDieHtml({ die, index })).join("")}`;
 
 const generateScoreHtml = (game: Game.Game) => {
   const scoreTable = [
@@ -248,7 +236,7 @@ app.put("/score/:scoreType", (req, res) => {
   games[gameUuid] = {
     dice: null,
     round: 0,
-    score: Score.addScore({ dice: game.dice, scoreType })(game.score),
+    score: Score.addScoreForScoreType({ dice: game.dice, scoreType })(game.score),
   };
   res.header("hx-trigger", "score-updated").send("");
 });
@@ -295,9 +283,9 @@ app.put("/select/:index", (req, res) => {
     return res.status(400).send("Bad request: dice not thrown");
   }
 
-  const { number, selected } = game.dice[index];
+  const { selected } = game.dice[index];
   game.dice[index] = { ...game.dice[index], selected: !selected };
-  res.send(generateDieHtml({ number, index, selected: !selected }));
+  res.send(generateDieHtml({ die: game.dice[index], index }));
 });
 
 app.listen(port, () => {

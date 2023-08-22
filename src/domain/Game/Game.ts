@@ -1,5 +1,4 @@
 import { Dice } from "../Dice";
-import { Die } from "../Die";
 import { Score } from "../Score";
 
 const gameRounds = [0, 1, 2, 3] as const;
@@ -17,7 +16,8 @@ export type GameWithDice = {
 };
 export type Game = GameWithDice | GameWithoutDice;
 
-export const isGameWithDice = (game: Game): game is GameWithDice => game.dice !== null;
+export const isGameWithDice = (game: Game): game is GameWithDice =>
+  game.dice !== null;
 
 export const isGameRound = (round: number): round is GameRound =>
   gameRounds.includes(round as GameRound);
@@ -25,31 +25,16 @@ export const isGameRound = (round: number): round is GameRound =>
 export const create = (): Game => ({
   dice: null,
   round: 0,
-  score: Score.scoreTypes.reduce(
-    (acc, scoreType) => {
-      acc[scoreType] = null;
-      return acc;
-    },
-    { bonus: null } as Score.Score
-  ),
+  score: Score.initializeScore(),
 });
 
 export const startRound1 = (game: Game): GameWithDice => ({
-  dice: [
-    Die.initializeDie(),
-    Die.initializeDie(),
-    Die.initializeDie(),
-    Die.initializeDie(),
-    Die.initializeDie(),
-  ],
+  dice: Dice.initializeDice(),
   round: 1,
   score: game.score,
 });
 
 export const getScoreOptions = (game: GameWithDice) =>
-  Score.scoreTypes
-    .map((scoreType) => ({
-      scoreType,
-      score: Score.getScoreForScoreType({ dice: game.dice, scoreType }),
-    }))
-    .filter(({ scoreType }) => game.score[scoreType] === null);
+  Score.getScoreOptionsForDice(game.dice).filter(({ scoreType }) =>
+    Score.isScoreTypeAvailable(scoreType)(game.score)
+  );
