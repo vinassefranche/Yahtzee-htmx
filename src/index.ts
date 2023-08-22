@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import express from "express";
+import express, { Response } from "express";
 import { Dice, Die, Game, Score } from "./domain";
 import { pipe } from "fp-ts/lib/function";
 import { either } from "fp-ts";
@@ -164,6 +164,10 @@ const getGameFromReq = (req: express.Request) => {
   return { game: games[gameUuid], gameUuid };
 };
 
+const errorToBadRequest = (response: Response) => (error: Error) => {
+  response.status(400).send(`Bad request: ${error.message}`);
+};
+
 app.get("/main-button", (req, res) => {
   const { game } = getGameFromReq(req);
   if (game === undefined) {
@@ -232,15 +236,10 @@ app.put("/score/:scoreType", (req, res) => {
   pipe(
     game,
     Game.addScoreForScoreType(scoreType),
-    either.match(
-      (error) => {
-        res.status(400).send(`Bad request: ${error.message}`);
-      },
-      (game) => {
-        games[gameUuid] = game;
-        res.header("hx-trigger", "score-updated").send("");
-      }
-    )
+    either.match(errorToBadRequest(res), (game) => {
+      games[gameUuid] = game;
+      res.header("hx-trigger", "score-updated").send("");
+    })
   );
 });
 
@@ -260,17 +259,12 @@ app.put("/throw", (req, res) => {
   pipe(
     game,
     Game.throwDice,
-    either.match(
-      (error) => {
-        res.status(400).send(`Bad request: ${error.message}`);
-      },
-      (game) => {
-        games[gameUuid] = game;
-        res
-          .header("hx-trigger-after-settle", "dice-thrown")
-          .send(generateDiceHtml(game.dice));
-      }
-    )
+    either.match(errorToBadRequest(res), (game) => {
+      games[gameUuid] = game;
+      res
+        .header("hx-trigger-after-settle", "dice-thrown")
+        .send(generateDiceHtml(game.dice));
+    })
   );
 });
 
@@ -286,16 +280,11 @@ app.put("/select/:index", (req, res) => {
   pipe(
     game,
     Game.toggleDieSelection(index),
-    either.match(
-      (error) => {
-        res.status(400).send(`Bad request: ${error.message}`);
-      },
-      (game) => {
-        games[gameUuid] = game;
-        res.send(generateDieHtml({ die: game.dice[index], index }));
-      }
-    )
-  )
+    either.match(errorToBadRequest(res), (game) => {
+      games[gameUuid] = game;
+      res.send(generateDieHtml({ die: game.dice[index], index }));
+    })
+  );
 });
 
 app.listen(port, () => {
