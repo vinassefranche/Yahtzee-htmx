@@ -37,9 +37,7 @@ export const startRound1 = (game: Game): GameWithDice => ({
 });
 
 export const getScoreOptions = (game: GameWithDice) =>
-  Score.getScoreOptionsForDice(game.dice).filter(({ scoreType }) =>
-    Score.isScoreTypeAvailable(scoreType)(game.score)
-  );
+  Score.getScoreOptionsForDice(game.dice)(game.score);
 
 export const getScoreForScoreType =
   (scoreType: Score.ScoreType) => (game: Game) =>

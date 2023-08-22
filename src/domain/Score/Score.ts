@@ -129,13 +129,16 @@ export const getScoreForDiceAndScoreType =
     }
   };
 
-export const getScoreOptionsForDice = (dice: Dice.Dice) => {
+export const getScoreOptionsForDice = (dice: Dice.Dice) => (score: Score) => {
   const getScoreForScoreType = getScoreForDiceAndScoreType(dice);
-  return scoreTypes.filter(isScorableScoreType).map((scoreType) => ({
-    scoreType,
-    score: getScoreForScoreType(scoreType),
-  }));
+  return scoreTypes
+    .filter(isScorableScoreType)
+    .map((scoreType) => ({
+      scoreType,
+      score: getScoreForScoreType(scoreType),
+    }))
+    .filter(({ scoreType }) => isScoreTypeAvailable(scoreType)(score));
 };
 
-export const isScoreTypeAvailable = (scoreType: ScoreType) => (score: Score) =>
+const isScoreTypeAvailable = (scoreType: ScoreType) => (score: Score) =>
   score[scoreType] === null;
