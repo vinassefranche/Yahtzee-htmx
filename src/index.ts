@@ -1,208 +1,65 @@
 import { randomUUID } from "crypto";
 import express from "express";
+import { Dice, Die, Score } from "./domain";
 
 const app = express();
 const port = 3000;
 
 app.use(express.static("build"));
 
-const dieNumbers = [1, 2, 3, 4, 5, 6] as const;
-type DieNumber = (typeof dieNumbers)[number];
 const gameRounds = [0, 1, 2, 3] as const;
 type GameRound = (typeof gameRounds)[number];
-type Die = { number: DieNumber; selected: boolean };
-type Dice = [Die, Die, Die, Die, Die];
-
-const scoreTypes = [
-  "ones",
-  "twos",
-  "threes",
-  "fours",
-  "fives",
-  "sixes",
-  "threeOfAKind",
-  "fourOfAKind",
-  "fullHouse",
-  "smallStraight",
-  "largeStraight",
-  "yams",
-  "chance",
-] as const;
-type ScoreType = (typeof scoreTypes)[number];
-type Score = Record<ScoreType | "bonus", number | null>;
-
-const isEligibleForBonus = (score: Score) => {
-  const sumOfNumbers =
-    (score.ones ?? 0) +
-    (score.twos ?? 0) +
-    (score.threes ?? 0) +
-    (score.fours ?? 0) +
-    (score.fives ?? 0) +
-    (score.sixes ?? 0);
-  return sumOfNumbers >= 62;
-};
-
-const addScore =
-  ({ dice, scoreType }: { dice: Dice; scoreType: ScoreType }) =>
-  (score: Score): Score => {
-    const newScore = {
-      ...score,
-      [scoreType]: getScoreForScoreType({ dice, scoreType: scoreType }),
-    };
-    if (newScore.bonus === null && isEligibleForBonus(newScore) ? 35 : null) {
-      newScore.bonus = 35;
-    }
-    return newScore;
-  };
-
-const isScoreType = (string: string): string is ScoreType =>
-  scoreTypes.includes(string as ScoreType);
 
 type GameWithoutDice = {
   dice: null;
   round: Extract<GameRound, 0>;
-  score: Score;
+  score: Score.Score;
 };
 type GameWithDice = {
-  dice: Dice;
+  dice: Dice.Dice;
   round: Exclude<GameRound, 0>;
-  score: Score;
+  score: Score.Score;
 };
 type Game = GameWithDice | GameWithoutDice;
 
 const isGameWithDice = (game: Game): game is GameWithDice => game.dice !== null;
 
-const isIndex = (index: number): index is 0 | 1 | 2 | 3 | 4 =>
-  [0, 1, 2, 3, 4].includes(index);
-
 const isGameRound = (round: number): round is GameRound =>
   gameRounds.includes(round as GameRound);
-
-const getRandomDieNumber = (): DieNumber =>
-  dieNumbers[Math.floor(Math.random() * dieNumbers.length)]!;
-const initializeDie = (): Die => ({
-  number: getRandomDieNumber(),
-  selected: false,
-});
 
 const createGame = (): Game => ({
   dice: null,
   round: 0,
-  score: scoreTypes.reduce(
+  score: Score.scoreTypes.reduce(
     (acc, scoreType) => {
       acc[scoreType] = null;
       return acc;
     },
-    { bonus: null } as Score
+    { bonus: null } as Score.Score
   ),
 });
 
 const startRound1 = (game: Game): Game => ({
   dice: [
-    initializeDie(),
-    initializeDie(),
-    initializeDie(),
-    initializeDie(),
-    initializeDie(),
+    Die.initializeDie(),
+    Die.initializeDie(),
+    Die.initializeDie(),
+    Die.initializeDie(),
+    Die.initializeDie(),
   ],
   round: 1,
   score: game.score,
 });
 
-const throwDice = (currentDice: Dice) =>
-  currentDice.map((dice) =>
-    dice.selected
-      ? dice
-      : {
-          number: getRandomDieNumber(),
-          selected: false,
-        }
-  ) as Dice;
-
-const sumSameNumber = ({ dice, number }: { number: DieNumber; dice: Dice }) =>
-  sumAllDice(dice.filter((die) => die.number === number));
-
-const sumAllDice = (dice: ReadonlyArray<Die>) =>
-  dice.reduce((acc, die) => acc + die.number, 0);
-
-const getNumberOfEachNumber = (dice: Dice) => {
-  const numberOfEachNumber = [0, 0, 0, 0, 0, 0];
-  dice.forEach((die) => {
-    numberOfEachNumber[die.number - 1]++;
-  });
-  return numberOfEachNumber;
-};
-
-const getScoreForScoreType = ({
-  dice,
-  scoreType,
-}: {
-  dice: Dice;
-  scoreType: ScoreType;
-}) => {
-  const numberOfEachNumber = getNumberOfEachNumber(dice);
-  switch (scoreType) {
-    case "ones":
-      return sumSameNumber({ dice, number: 1 });
-    case "twos":
-      return sumSameNumber({ dice, number: 2 });
-    case "threes":
-      return sumSameNumber({ dice, number: 3 });
-    case "fours":
-      return sumSameNumber({ dice, number: 4 });
-    case "fives":
-      return sumSameNumber({ dice, number: 5 });
-    case "sixes":
-      return sumSameNumber({ dice, number: 6 });
-    case "threeOfAKind":
-      return numberOfEachNumber.some((number) => number >= 3)
-        ? sumAllDice(dice)
-        : 0;
-    case "fourOfAKind":
-      return numberOfEachNumber.some((number) => number >= 4)
-        ? sumAllDice(dice)
-        : 0;
-    case "fullHouse":
-      return numberOfEachNumber.some((number) => number === 3) &&
-        numberOfEachNumber.some((number) => number === 2)
-        ? 25
-        : 0;
-    case "smallStraight":
-      return dice.some((die) => die.number === 3) &&
-        dice.some((die) => die.number === 4) &&
-        ((dice.some((die) => die.number === 1) &&
-          dice.some((die) => die.number === 2)) ||
-          (dice.some((die) => die.number === 2) &&
-            dice.some((die) => die.number === 5)) ||
-          (dice.some((die) => die.number === 5) &&
-            dice.some((die) => die.number === 6)))
-        ? 30
-        : 0;
-    case "largeStraight":
-      return dice.some((die) => die.number === 2) &&
-        dice.some((die) => die.number === 3) &&
-        dice.some((die) => die.number === 4) &&
-        dice.some((die) => die.number === 5) &&
-        (dice.some((die) => die.number === 1) ||
-          dice.some((die) => die.number === 6))
-        ? 40
-        : 0;
-    case "yams":
-      return numberOfEachNumber.some((number) => number === 5) ? 50 : 0;
-    case "chance":
-      return sumAllDice(dice);
-  }
-};
-
 const getScoreOptions = (game: GameWithDice) =>
-  scoreTypes
+  Score.scoreTypes
     .map((scoreType) => ({
       scoreType,
-      score: getScoreForScoreType({ dice: game.dice, scoreType }),
+      score: Score.getScoreForScoreType({ dice: game.dice, scoreType }),
     }))
     .filter(({ scoreType }) => game.score[scoreType] === null);
 
-const scoreLabels: Record<ScoreType | "bonus", string> = {
+const scoreLabels: Record<Score.ScoreType | "bonus", string> = {
   ones: "Ones",
   twos: "Twos",
   threes: "Threes",
@@ -221,7 +78,7 @@ const scoreLabels: Record<ScoreType | "bonus", string> = {
 
 const buttonClass = "bg-lime-600 text-white rounded-md px-2 py-1";
 
-const dieNumberToClass = (number: DieNumber) => {
+const dieNumberToClass = (number: Die.DieNumber) => {
   switch (number) {
     case 1:
       return "one";
@@ -243,7 +100,7 @@ const generateDieHtml = ({
   index,
   selected,
 }: {
-  number: DieNumber;
+  number: Die.DieNumber;
   index: number;
   selected: boolean;
 }) => `
@@ -290,7 +147,7 @@ const generateScoreHtml = (game: Game) => {
     ["sixes", "yams"],
     ["bonus", "chance"],
   ] as const satisfies ReadonlyArray<
-    readonly [ScoreType | "bonus", ScoreType]
+    readonly [Score.ScoreType | "bonus", Score.ScoreType]
   >;
   const commonCellClass = "p-1 border border-solid border-black";
   return `
@@ -432,7 +289,7 @@ app.put("/score/:scoreType", (req, res) => {
     return res.status(400).send("Bad request: dice not thrown");
   }
   const { scoreType } = req.params;
-  if (!isScoreType(scoreType)) {
+  if (!Score.isScoreType(scoreType)) {
     return res
       .status(400)
       .send("Bad request: given scoreType is not a valid one");
@@ -443,7 +300,7 @@ app.put("/score/:scoreType", (req, res) => {
   games[gameUuid] = {
     dice: null,
     round: 0,
-    score: addScore({ dice: game.dice, scoreType })(game.score),
+    score: Score.addScore({ dice: game.dice, scoreType })(game.score),
   };
   res.header("hx-trigger", "score-updated").send("");
 });
@@ -469,7 +326,7 @@ app.put("/throw", (req, res) => {
       return res.status(400).send("Bad request");
     }
 
-    game.dice = throwDice(game.dice);
+    game.dice = Dice.throwDice(game.dice);
     game.round = newRound as GameWithDice["round"];
   }
   res
@@ -479,7 +336,7 @@ app.put("/throw", (req, res) => {
 
 app.put("/select/:index", (req, res) => {
   const index = parseInt(req.params.index);
-  if (isNaN(index) || !isIndex(index)) {
+  if (isNaN(index) || !Dice.isDiceIndex(index)) {
     return res.status(400).send("Bad request");
   }
   const { game } = getGameFromReq(req);
