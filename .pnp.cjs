@@ -32,6 +32,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@types/node", "npm:20.5.0"],\
             ["concurrently", "npm:8.2.0"],\
             ["express", "npm:4.18.2"],\
+            ["fp-ts", "npm:2.16.1"],\
             ["nodemon", "npm:3.0.1"],\
             ["tailwindcss", "npm:3.3.3"],\
             ["ts-node", "virtual:42dc72945ec62040556597f8f5908b26f478182e29e678f8c75af6af5f53fbc4f375b215d3e1cbed428bb071b07ff75690e71985b6c7d57b80f68295dba9aa63#npm:10.9.1"],\
@@ -1199,6 +1200,15 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
+      ["fp-ts", [\
+        ["npm:2.16.1", {\
+          "packageLocation": "./.yarn/cache/fp-ts-npm-2.16.1-8deb3ec2d6-94e8bb1d03.zip/node_modules/fp-ts/",\
+          "packageDependencies": [\
+            ["fp-ts", "npm:2.16.1"]\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
       ["fresh", [\
         ["npm:0.5.2", {\
           "packageLocation": "./.yarn/cache/fresh-npm-0.5.2-ad2bb4c0a2-13ea8b08f9.zip/node_modules/fresh/",\
@@ -1422,6 +1432,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@types/node", "npm:20.5.0"],\
             ["concurrently", "npm:8.2.0"],\
             ["express", "npm:4.18.2"],\
+            ["fp-ts", "npm:2.16.1"],\
             ["nodemon", "npm:3.0.1"],\
             ["tailwindcss", "npm:3.3.3"],\
             ["ts-node", "virtual:42dc72945ec62040556597f8f5908b26f478182e29e678f8c75af6af5f53fbc4f375b215d3e1cbed428bb071b07ff75690e71985b6c7d57b80f68295dba9aa63#npm:10.9.1"],\
