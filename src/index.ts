@@ -257,20 +257,21 @@ app.put("/throw", (req, res) => {
   if (game === undefined) {
     return res.status(400).send("Bad request: game not found");
   }
-  if (!Game.isGameWithDice(game)) {
-    games[gameUuid] = Game.startRound1(game);
-  } else {
-    const newRound = game.round + 1;
-    if (!Game.isGameRound(newRound)) {
-      return res.status(400).send("Bad request");
-    }
-
-    game.dice = Dice.throwDice(game.dice);
-    game.round = newRound as Game.GameWithDice["round"];
-  }
-  res
-    .header("hx-trigger-after-settle", "dice-thrown")
-    .send(generateDiceHtml((games[gameUuid] as Game.GameWithDice).dice));
+  pipe(
+    game,
+    Game.throwDice,
+    either.match(
+      (error) => {
+        res.status(400).send(`Bad request: ${error.message}`);
+      },
+      (game) => {
+        games[gameUuid] = game;
+        res
+          .header("hx-trigger-after-settle", "dice-thrown")
+          .send(generateDiceHtml(game.dice));
+      }
+    )
+  );
 });
 
 app.put("/select/:index", (req, res) => {

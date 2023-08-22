@@ -1,10 +1,18 @@
-import { flow } from "fp-ts/lib/function";
+import { flow, pipe } from "fp-ts/lib/function";
 import { Dice } from "../Dice";
 import { Score } from "../Score";
 import { either } from "fp-ts";
+import { Either } from "fp-ts/lib/Either";
 
 const gameRounds = [0, 1, 2, 3] as const;
 type GameRound = (typeof gameRounds)[number];
+type GameRoundThatCanBeIncreased = Exclude<GameRound, 3>;
+
+export const isGameRound = (round: number): round is GameRound =>
+  gameRounds.includes(round as GameRound);
+export const isGameRoundThatCanBeIncreased = (
+  round: GameRound
+): round is GameRoundThatCanBeIncreased => round !== 3;
 
 type GameWithoutDice = {
   dice: null;
@@ -20,9 +28,6 @@ export type Game = GameWithDice | GameWithoutDice;
 
 export const isGameWithDice = (game: Game): game is GameWithDice =>
   game.dice !== null;
-
-export const isGameRound = (round: number): round is GameRound =>
-  gameRounds.includes(round as GameRound);
 
 export const create = (): Game => ({
   dice: null,
@@ -51,3 +56,36 @@ export const addScoreForScoreType = (scoreType: Score.ScorableScoreType) =>
     ),
     either.map((score): GameWithoutDice => ({ dice: null, round: 0, score }))
   );
+
+export const throwDice = (game: Game): Either<Error, GameWithDice> => {
+  if (!isGameWithDice(game)) {
+    return either.right(startRound1(game));
+  } else {
+    return pipe(
+      game.round,
+      either.fromPredicate(
+        isGameRoundThatCanBeIncreased,
+        () => new Error(`Dice cannot be thrown in round ${game.round}`)
+      ),
+      either.map(increaseRound),
+      either.map((round) => ({
+        ...game,
+        round,
+        dice: Dice.throwDice(game.dice),
+      }))
+    );
+  }
+};
+
+type IncreasedRound<Round extends GameRoundThatCanBeIncreased> = Round extends 0
+  ? 1
+  : Round extends 1
+  ? 2
+  : Round extends 2
+  ? 3
+  : never;
+const increaseRound = <Round extends GameRoundThatCanBeIncreased>(
+  gameRound: Round
+): IncreasedRound<Round> => {
+  return (gameRound + 1) as any;
+}
