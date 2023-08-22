@@ -38,3 +38,7 @@ export const getScoreOptions = (game: GameWithDice) =>
   Score.getScoreOptionsForDice(game.dice).filter(({ scoreType }) =>
     Score.isScoreTypeAvailable(scoreType)(game.score)
   );
+
+export const getScoreForScoreType =
+  (scoreType: Score.ScoreType) => (game: Game) =>
+    game.score[scoreType];

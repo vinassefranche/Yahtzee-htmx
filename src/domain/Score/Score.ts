@@ -1,13 +1,14 @@
 import { Dice } from "../Dice";
 import { Die } from "../Die";
 
-export const scoreTypes = [
+const scoreTypes = [
   "ones",
   "twos",
   "threes",
   "fours",
   "fives",
   "sixes",
+  "bonus",
   "threeOfAKind",
   "fourOfAKind",
   "fullHouse",
@@ -17,10 +18,15 @@ export const scoreTypes = [
   "chance",
 ] as const;
 export type ScoreType = (typeof scoreTypes)[number];
-export type Score = Record<ScoreType | "bonus", number | null>;
+type ScorableScoreType = Exclude<ScoreType, "bonus">;
+export type Score = Record<ScoreType, number | null>;
 
 export const isScoreType = (string: string): string is ScoreType =>
   scoreTypes.includes(string as ScoreType);
+
+export const isScorableScoreType = (
+  string: string
+): string is ScorableScoreType => isScoreType(string) && string !== "bonus";
 
 export const initializeScore = () =>
   scoreTypes.reduce(
@@ -43,20 +49,24 @@ const isEligibleForBonus = (score: Score) => {
 };
 
 export const addScoreForScoreType =
-  ({ dice, scoreType }: { dice: Dice.Dice; scoreType: ScoreType }) =>
+  ({ dice, scoreType }: { dice: Dice.Dice; scoreType: ScorableScoreType }) =>
   (score: Score): Score => {
     const newScore = {
       ...score,
       [scoreType]: getScoreForDiceAndScoreType(dice)(scoreType),
     };
-    if (newScore.bonus === null && isEligibleForBonus(newScore) ? 35 : null) {
+    if (
+      isScoreTypeAvailable("bonus")(newScore) && isEligibleForBonus(newScore)
+        ? 35
+        : null
+    ) {
       newScore.bonus = 35;
     }
     return newScore;
   };
 
 export const getScoreForDiceAndScoreType =
-  (dice: Dice.Dice) => (scoreType: ScoreType) => {
+  (dice: Dice.Dice) => (scoreType: ScorableScoreType) => {
     const numberOfEachNumber = Dice.getNumberOfEachNumber(dice);
     switch (scoreType) {
       case "ones":
@@ -113,7 +123,7 @@ export const getScoreForDiceAndScoreType =
 
 export const getScoreOptionsForDice = (dice: Dice.Dice) => {
   const getScoreForScoreType = getScoreForDiceAndScoreType(dice);
-  return scoreTypes.map((scoreType) => ({
+  return scoreTypes.filter(isScorableScoreType).map((scoreType) => ({
     scoreType,
     score: getScoreForScoreType(scoreType),
   }));

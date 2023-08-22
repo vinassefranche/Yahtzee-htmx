@@ -96,7 +96,7 @@ const generateScoreHtml = (game: Game.Game) => {
           scoreLabels[scoreType1]
         }</div>
           <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
-          game.score[scoreType1] ?? ""
+            Game.getScoreForScoreType(scoreType1)(game) ?? ""
         }</div>
           <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
           scoreLabels[scoreType2]
@@ -225,12 +225,12 @@ app.put("/score/:scoreType", (req, res) => {
     return res.status(400).send("Bad request: dice not thrown");
   }
   const { scoreType } = req.params;
-  if (!Score.isScoreType(scoreType)) {
+  if (!Score.isScorableScoreType(scoreType)) {
     return res
       .status(400)
       .send("Bad request: given scoreType is not a valid one");
   }
-  if (game.score[scoreType] !== null) {
+  if (!Score.isScoreTypeAvailable(scoreType)(game.score)) {
     return res.status(400).send("Bad request: score already set");
   }
   games[gameUuid] = {
