@@ -12,3 +12,8 @@ export const initializeDie = (): Die => ({
   number: getRandomDieNumber(),
   selected: false,
 });
+
+export const toggleSelection = (die: Die): Die => ({
+  ...die,
+  selected: !die.selected,
+});

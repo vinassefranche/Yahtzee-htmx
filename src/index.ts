@@ -279,17 +279,23 @@ app.put("/select/:index", (req, res) => {
   if (isNaN(index) || !Dice.isDiceIndex(index)) {
     return res.status(400).send("Bad request");
   }
-  const { game } = getGameFromReq(req);
+  const { game, gameUuid } = getGameFromReq(req);
   if (game === undefined) {
     return res.status(400).send("Bad request: game not found");
   }
-  if (!Game.isGameWithDice(game)) {
-    return res.status(400).send("Bad request: dice not thrown");
-  }
-
-  const { selected } = game.dice[index];
-  game.dice[index] = { ...game.dice[index], selected: !selected };
-  res.send(generateDieHtml({ die: game.dice[index], index }));
+  pipe(
+    game,
+    Game.toggleDieSelection(index),
+    either.match(
+      (error) => {
+        res.status(400).send(`Bad request: ${error.message}`);
+      },
+      (game) => {
+        games[gameUuid] = game;
+        res.send(generateDieHtml({ die: game.dice[index], index }));
+      }
+    )
+  )
 });
 
 app.listen(port, () => {

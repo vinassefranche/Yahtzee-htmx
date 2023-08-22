@@ -57,6 +57,17 @@ export const addScoreForScoreType = (scoreType: Score.ScorableScoreType) =>
     either.map((score): GameWithoutDice => ({ dice: null, round: 0, score }))
   );
 
+export const toggleDieSelection = (dieIndex: Dice.DiceIndex) =>
+  flow(
+    either.fromPredicate(isGameWithDice, () => new Error("Dice not thrown")),
+    either.map(
+      (game): GameWithDice => ({
+        ...game,
+        dice: Dice.toggleDieSelection(dieIndex)(game.dice),
+      })
+    )
+  );
+
 export const throwDice = (game: Game): Either<Error, GameWithDice> => {
   if (!isGameWithDice(game)) {
     return either.right(startRound1(game));
@@ -88,4 +99,4 @@ const increaseRound = <Round extends GameRoundThatCanBeIncreased>(
   gameRound: Round
 ): IncreasedRound<Round> => {
   return (gameRound + 1) as any;
-}
+};
