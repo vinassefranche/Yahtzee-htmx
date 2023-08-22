@@ -1,5 +1,7 @@
+import { either } from "fp-ts";
 import { Dice } from "../Dice";
 import { Die } from "../Die";
+import { pipe } from "fp-ts/lib/function";
 
 const scoreTypes = [
   "ones",
@@ -18,7 +20,7 @@ const scoreTypes = [
   "chance",
 ] as const;
 export type ScoreType = (typeof scoreTypes)[number];
-type ScorableScoreType = Exclude<ScoreType, "bonus">;
+export type ScorableScoreType = Exclude<ScoreType, "bonus">;
 export type Score = Record<ScoreType, number | null>;
 
 export const isScoreType = (string: string): string is ScoreType =>
@@ -50,19 +52,25 @@ const isEligibleForBonus = (score: Score) => {
 
 export const addScoreForScoreType =
   ({ dice, scoreType }: { dice: Dice.Dice; scoreType: ScorableScoreType }) =>
-  (score: Score): Score => {
-    const newScore = {
-      ...score,
-      [scoreType]: getScoreForDiceAndScoreType(dice)(scoreType),
-    };
-    if (
-      isScoreTypeAvailable("bonus")(newScore) && isEligibleForBonus(newScore)
-        ? 35
-        : null
-    ) {
-      newScore.bonus = 35;
-    }
-    return newScore;
+  (score: Score) => {
+    return pipe(
+      score,
+      either.fromPredicate(
+        isScoreTypeAvailable(scoreType),
+        () => new Error(`score for ${scoreType} already set`)
+      ),
+      either.map(
+        (score): Score => ({
+          ...score,
+          [scoreType]: getScoreForDiceAndScoreType(dice)(scoreType),
+        })
+      ),
+      either.map((score) =>
+        isScoreTypeAvailable("bonus")(score) && isEligibleForBonus(score)
+          ? { ...score, bonus: 35 }
+          : score
+      )
+    );
   };
 
 export const getScoreForDiceAndScoreType =

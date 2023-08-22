@@ -1,5 +1,7 @@
+import { flow } from "fp-ts/lib/function";
 import { Dice } from "../Dice";
 import { Score } from "../Score";
+import { either } from "fp-ts";
 
 const gameRounds = [0, 1, 2, 3] as const;
 type GameRound = (typeof gameRounds)[number];
@@ -42,3 +44,12 @@ export const getScoreOptions = (game: GameWithDice) =>
 export const getScoreForScoreType =
   (scoreType: Score.ScoreType) => (game: Game) =>
     game.score[scoreType];
+
+export const addScoreForScoreType = (scoreType: Score.ScorableScoreType) =>
+  flow(
+    either.fromPredicate(isGameWithDice, () => new Error("Dice not thrown")),
+    either.flatMap((game) =>
+      Score.addScoreForScoreType({ dice: game.dice, scoreType })(game.score)
+    ),
+    either.map((score): GameWithoutDice => ({ dice: null, round: 0, score }))
+  );

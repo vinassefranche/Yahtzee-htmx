@@ -1,6 +1,8 @@
 import { randomUUID } from "crypto";
 import express from "express";
 import { Dice, Die, Game, Score } from "./domain";
+import { pipe } from "fp-ts/lib/function";
+import { either } from "fp-ts";
 
 const app = express();
 const port = 3000;
@@ -96,7 +98,7 @@ const generateScoreHtml = (game: Game.Game) => {
           scoreLabels[scoreType1]
         }</div>
           <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
-            Game.getScoreForScoreType(scoreType1)(game) ?? ""
+          Game.getScoreForScoreType(scoreType1)(game) ?? ""
         }</div>
           <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
           scoreLabels[scoreType2]
@@ -221,24 +223,25 @@ app.put("/score/:scoreType", (req, res) => {
   if (game === undefined) {
     return res.status(400).send("Bad request: game not found");
   }
-  if (!Game.isGameWithDice(game)) {
-    return res.status(400).send("Bad request: dice not thrown");
-  }
   const { scoreType } = req.params;
   if (!Score.isScorableScoreType(scoreType)) {
     return res
       .status(400)
       .send("Bad request: given scoreType is not a valid one");
   }
-  if (!Score.isScoreTypeAvailable(scoreType)(game.score)) {
-    return res.status(400).send("Bad request: score already set");
-  }
-  games[gameUuid] = {
-    dice: null,
-    round: 0,
-    score: Score.addScoreForScoreType({ dice: game.dice, scoreType })(game.score),
-  };
-  res.header("hx-trigger", "score-updated").send("");
+  pipe(
+    game,
+    Game.addScoreForScoreType(scoreType),
+    either.match(
+      (error) => {
+        res.status(400).send(`Bad request: ${error.message}`);
+      },
+      (game) => {
+        games[gameUuid] = game;
+        res.header("hx-trigger", "score-updated").send("");
+      }
+    )
+  );
 });
 
 app.get("/score", (req, res) => {
