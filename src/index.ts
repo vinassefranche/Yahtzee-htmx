@@ -158,10 +158,14 @@ app.get("/", (_, res) => {
 
 const getGameFromReq = (req: express.Request) => {
   const gameUuid = req.headers["game-uuid"];
-  if (typeof gameUuid !== "string" || !(gameUuid in games)) {
-    return { game: undefined, gameUuid: undefined };
+  if (typeof gameUuid !== "string") {
+    return either.left(new Error("game-uuid header not found"));
   }
-  return { game: games[gameUuid], gameUuid };
+  const game = games[gameUuid];
+  if (!game) {
+    return either.left(new Error("game not found"));
+  }
+  return either.right({ game, gameUuid });
 };
 
 const errorToBadRequest = (response: Response) => (error: Error) => {
@@ -169,121 +173,142 @@ const errorToBadRequest = (response: Response) => (error: Error) => {
 };
 
 app.get("/main-button", (req, res) => {
-  const { game } = getGameFromReq(req);
-  if (game === undefined) {
-    return res.status(400).send("Bad request: game not found");
-  }
-  if (!Game.isGameWithDice(game)) {
-    return res.send(throwDiceButton());
-  }
+  pipe(
+    req,
+    getGameFromReq,
+    either.match(errorToBadRequest(res), ({ game }) => {
+      if (!Game.isGameWithDice(game)) {
+        return res.send(throwDiceButton());
+      }
 
-  const { round } = game;
-  if (round === 3) {
-    return res.send("");
-  }
-  return res.send(throwDiceButton("Throw not selected dice"));
+      const { round } = game;
+      if (round === 3) {
+        return res.send("");
+      }
+      return res.send(throwDiceButton("Throw not selected dice"));
+    })
+  );
 });
 
 app.post("/reset", (req, res) => {
-  const { gameUuid } = getGameFromReq(req);
-  if (gameUuid === undefined) {
-    return res.status(400).send("Bad request: game not found");
-  }
-  games[gameUuid] = Game.create();
-  res.header("hx-trigger", "game-reset").send("");
+  pipe(
+    req,
+    getGameFromReq,
+    either.match(errorToBadRequest(res), ({ gameUuid }) => {
+      games[gameUuid] = Game.create();
+      res.header("hx-trigger", "game-reset").send("");
+    })
+  );
 });
 
 app.get("/score-options", (req, res) => {
-  const { game } = getGameFromReq(req);
-  if (game === undefined) {
-    return res.status(400).send("Bad request: game not found");
-  }
-  if (!Game.isGameWithDice(game)) {
-    return res.send("");
-  }
-  const scoreOptions = Game.getScoreOptions(game);
-  res.send(`
-    <div class="grid grid-cols-4 gap-2">
-      ${scoreOptions
-        .map(
-          ({ score, scoreType }) =>
-            `<button
-              class="${
-                score === 0 ? "bg-gray-500" : "bg-cyan-500"
-              } text-white rounded-md px-2 py-1"
-              hx-put="/score/${scoreType}"
-              hx-target="#dice"
-            >
-              ${scoreLabels[scoreType]} (${score})
-            </button>`
-        )
-        .join("")}
-    </div>
-  `);
+  pipe(
+    req,
+    getGameFromReq,
+    either.match(errorToBadRequest(res), ({ game }) => {
+      if (!Game.isGameWithDice(game)) {
+        res.send("");
+        return;
+      }
+
+      const scoreOptions = Game.getScoreOptions(game);
+      res.send(`
+        <div class="grid grid-cols-4 gap-2">
+          ${scoreOptions
+            .map(
+              ({ score, scoreType }) =>
+                `<button
+                  class="${
+                    score === 0 ? "bg-gray-500" : "bg-cyan-500"
+                  } text-white rounded-md px-2 py-1"
+                  hx-put="/score/${scoreType}"
+                  hx-target="#dice"
+                >
+                  ${scoreLabels[scoreType]} (${score})
+                </button>`
+            )
+            .join("")}
+        </div>
+      `);
+    })
+  );
 });
 
 app.put("/score/:scoreType", (req, res) => {
-  const { game, gameUuid } = getGameFromReq(req);
-  if (game === undefined) {
-    return res.status(400).send("Bad request: game not found");
-  }
-  const { scoreType } = req.params;
-  if (!Score.isScorableScoreType(scoreType)) {
-    return res
-      .status(400)
-      .send("Bad request: given scoreType is not a valid one");
-  }
   pipe(
-    game,
-    Game.addScoreForScoreType(scoreType),
-    either.match(errorToBadRequest(res), (game) => {
-      games[gameUuid] = game;
+    req,
+    getGameFromReq,
+    either.bind("scoreType", () =>
+      pipe(
+        req.params.scoreType,
+        either.fromPredicate(
+          Score.isScorableScoreType,
+          () => new Error("Bad request: given scoreType is not a valid one")
+        )
+      )
+    ),
+    either.bind("updatedGame", ({ game, scoreType }) =>
+      Game.addScoreForScoreType(scoreType)(game)
+    ),
+    either.match(errorToBadRequest(res), ({ gameUuid, updatedGame }) => {
+      games[gameUuid] = updatedGame;
       res.header("hx-trigger", "score-updated").send("");
     })
   );
 });
 
 app.get("/score", (req, res) => {
-  const { game } = getGameFromReq(req);
-  if (game === undefined) {
-    return res.status(400).send("Bad request: game not found");
-  }
-  res.send(generateScoreHtml(game));
-});
-
-app.put("/throw", (req, res) => {
-  const { game, gameUuid } = getGameFromReq(req);
-  if (game === undefined) {
-    return res.status(400).send("Bad request: game not found");
-  }
   pipe(
-    game,
-    Game.throwDice,
-    either.match(errorToBadRequest(res), (game) => {
-      games[gameUuid] = game;
-      res
-        .header("hx-trigger-after-settle", "dice-thrown")
-        .send(generateDiceHtml(game.dice));
+    req,
+    getGameFromReq,
+    either.match(errorToBadRequest(res), ({ game }) => {
+      res.send(generateScoreHtml(game));
     })
   );
 });
 
-app.put("/select/:index", (req, res) => {
-  const index = parseInt(req.params.index);
-  if (isNaN(index) || !Dice.isDiceIndex(index)) {
-    return res.status(400).send("Bad request");
-  }
-  const { game, gameUuid } = getGameFromReq(req);
-  if (game === undefined) {
-    return res.status(400).send("Bad request: game not found");
-  }
+app.put("/throw", (req, res) => {
   pipe(
-    game,
-    Game.toggleDieSelection(index),
-    either.match(errorToBadRequest(res), (game) => {
-      games[gameUuid] = game;
-      res.send(generateDieHtml({ die: game.dice[index], index }));
+    req,
+    getGameFromReq,
+    either.bind("updatedGame", ({ game }) => Game.throwDice(game)),
+    either.match(errorToBadRequest(res), ({ gameUuid, updatedGame }) => {
+      games[gameUuid] = updatedGame;
+      res
+        .header("hx-trigger-after-settle", "dice-thrown")
+        .send(generateDiceHtml(updatedGame.dice));
     })
+  );
+});
+
+app.put("/select/:diceIndex", (req, res) => {
+  pipe(
+    req,
+    getGameFromReq,
+    either.bind("diceIndex", () =>
+      pipe(
+        parseInt(req.params.diceIndex),
+        either.fromPredicate(
+          Dice.isDiceIndex,
+          () => new Error("Bad request: given diceIndex is not a valid one")
+        )
+      )
+    ),
+    either.bind("updatedGame", ({ game, diceIndex }) =>
+      Game.toggleDieSelection(diceIndex)(game)
+    ),
+    either.match(
+      errorToBadRequest(res),
+      ({ gameUuid, updatedGame, diceIndex }) => {
+        games[gameUuid] = updatedGame;
+        res.send(
+          generateDieHtml({
+            die: updatedGame.dice[diceIndex],
+            index: diceIndex,
+          })
+        );
+      }
+    )
   );
 });
 
