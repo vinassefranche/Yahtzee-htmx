@@ -1,0 +1,20 @@
+<div class="grid grid-cols-4">
+  {{#each scoreTable}}
+  {{#with this.first}}
+  <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}}">
+    {{label}}
+  </div>
+  <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}} border-l-0">
+    {{score}}
+  </div>
+  {{/with}}
+  {{#with this.second}}
+  <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}} border-l-0">
+    {{label}}
+  </div>
+  <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}} border-l-0">
+    {{score}}
+  </div>
+  {{/with}}
+  {{/each}}
+</div>

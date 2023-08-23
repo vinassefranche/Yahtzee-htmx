@@ -47,56 +47,33 @@ const dieNumberToClass = (number: Die.DieNumber) => {
   }
 };
 
+const generateScoreTable = (game: Game.Game) =>
+  (
+    [
+      ["ones", "threeOfAKind"],
+      ["twos", "fourOfAKind"],
+      ["threes", "fullHouse"],
+      ["fours", "smallStraight"],
+      ["fives", "largeStraight"],
+      ["sixes", "yams"],
+      ["bonus", "chance"],
+    ] as const satisfies ReadonlyArray<
+      readonly [Score.ScoreType, Score.ScoreType]
+    >
+  ).map(([scoreType1, scoreType2]) => ({
+    first: {
+      scoreType: scoreType1,
+      score: Game.getScoreForScoreType(scoreType1)(game) ?? "",
+      label: scoreLabels[scoreType1],
+    },
+    second: {
+      scoreType: scoreType2,
+      score: game.score[scoreType2] ?? "",
+      label: scoreLabels[scoreType2],
+    },
+  }));
+
 const games: Record<string, Game.Game> = {};
-
-const generateScoreHtml = (game: Game.Game) => {
-  const scoreTable = [
-    ["ones", "threeOfAKind"],
-    ["twos", "fourOfAKind"],
-    ["threes", "fullHouse"],
-    ["fours", "smallStraight"],
-    ["fives", "largeStraight"],
-    ["sixes", "yams"],
-    ["bonus", "chance"],
-  ] as const satisfies ReadonlyArray<
-    readonly [Score.ScoreType | "bonus", Score.ScoreType]
-  >;
-  const commonCellClass = "p-1 border border-solid border-black";
-  return `
-  <div class="grid grid-cols-4">
-    ${scoreTable
-      .map(([scoreType1, scoreType2], index) => {
-        const optionalTopBorder = index === 0 ? "" : "border-t-0";
-        return `
-          <div class="${commonCellClass} ${optionalTopBorder}">${
-          scoreLabels[scoreType1]
-        }</div>
-          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
-          Game.getScoreForScoreType(scoreType1)(game) ?? ""
-        }</div>
-          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
-          scoreLabels[scoreType2]
-        }</div>
-          <div class="${commonCellClass} ${optionalTopBorder} border-l-0">${
-          game.score[scoreType2] ?? ""
-        }</div>
-        `;
-      })
-      .join("")}
-    </div>
-  `;
-};
-
-app.get("/", (_, res) => {
-  const gameUuid = randomUUID();
-  const game = Game.create();
-  games[gameUuid] = game;
-  res.render("index", {
-    gameUuid,
-    score: generateScoreHtml(game),
-    throwDiceButtonLabel: "Throw dice",
-  });
-});
 
 const getGameFromReq = (req: express.Request) => {
   const gameUuid = req.headers["game-uuid"];
@@ -113,6 +90,17 @@ const getGameFromReq = (req: express.Request) => {
 const errorToBadRequest = (response: Response) => (error: Error) => {
   response.status(400).send(`Bad request: ${error.message}`);
 };
+
+app.get("/", (_, res) => {
+  const gameUuid = randomUUID();
+  const game = Game.create();
+  games[gameUuid] = game;
+  res.render("index", {
+    gameUuid,
+    scoreTable: generateScoreTable(game),
+    throwDiceButtonLabel: "Throw dice",
+  });
+});
 
 app.get("/main-button", (req, res) => {
   pipe(
@@ -190,7 +178,9 @@ app.get("/score", (req, res) => {
     req,
     getGameFromReq,
     either.match(errorToBadRequest(res), ({ game }) => {
-      res.send(generateScoreHtml(game));
+      res.render("score", {
+        scoreTable: generateScoreTable(game),
+      });
     })
   );
 });

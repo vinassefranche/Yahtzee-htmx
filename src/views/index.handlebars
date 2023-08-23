@@ -11,7 +11,7 @@
       hx-get="/score"
       hx-trigger="load, game-reset from:body, score-updated from:body"
       class="flex flex-col gap-2 items-center"
-    >{{{score}}}</div>
+    >>{{> score }}</div></div>
     <div id="game" class="flex flex-col gap-6 items-center">
       <div id="dice" class="flex gap-2 bg-green-700 p-6 w-[205px] h-[73px]">
       </div>
