@@ -135,16 +135,12 @@ app.get("/main-button", (req, res) => {
     req,
     getGameFromReq,
     either.match(errorToBadRequest(res), ({ game }) => {
-      if (!Game.isGameWithDice(game)) {
-        return res.render("throwDiceButton", { label: "Throw dice" });
-      }
-
       const { round } = game;
       if (round === 3) {
         return res.send("");
       }
       return res.render("throwDiceButton", {
-        label: "Throw not selected dice",
+        label: round === 0 ? "Throw dice" : "Throw not selected dice",
       });
     })
   );
