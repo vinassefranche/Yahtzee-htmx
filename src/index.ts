@@ -30,8 +30,6 @@ const scoreLabels: Record<Score.ScoreType | "bonus", string> = {
   bonus: "Bonus (if more than 62)",
 };
 
-const buttonClass = "bg-lime-600 text-white rounded-md px-2 py-1";
-
 const dieNumberToClass = (number: Die.DieNumber) => {
   switch (number) {
     case 1:
@@ -69,7 +67,7 @@ const throwDiceButton = (label: string | null = "Throw dice") =>
         hx-target="#dice"
         hx-swap="innerHTML settle:500ms"
         hx-indicator="#dice"
-        class="${buttonClass}">
+        class="bg-lime-600 text-white rounded-md px-2 py-1">
           ${label}
       </button>`
     : "";
