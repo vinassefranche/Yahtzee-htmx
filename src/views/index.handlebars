@@ -20,7 +20,7 @@
           class="h-8"
           hx-trigger="load, dice-thrown from:body, game-reset from:body, score-updated from:body"
           hx-get="/main-button"
-        >{{{throwDiceButton}}}</div>
+        >{{> throwDiceButton label=throwDiceButtonLabel }}</div>
         <button hx-post="/reset" hx-target="#dice" class="bg-red-400 text-white rounded-md px-2 py-1">
           Reset
         </button>

@@ -60,18 +60,6 @@ const generateDieHtml = ({ die, index }: { die: Die.Die; index: number }) => `
     </div>
   `;
 
-const throwDiceButton = (label: string | null = "Throw dice") =>
-  label
-    ? `<button
-        hx-put="/throw"
-        hx-target="#dice"
-        hx-swap="innerHTML settle:500ms"
-        hx-indicator="#dice"
-        class="bg-lime-600 text-white rounded-md px-2 py-1">
-          ${label}
-      </button>`
-    : "";
-
 const games: Record<string, Game.Game> = {};
 
 const generateDiceHtml = (dice: Dice.Dice) =>
@@ -122,7 +110,7 @@ app.get("/", (_, res) => {
   res.render("index", {
     gameUuid,
     score: generateScoreHtml(game),
-    throwDiceButton: throwDiceButton(),
+    throwDiceButtonLabel: "Throw dice",
   });
 });
 
@@ -148,14 +136,16 @@ app.get("/main-button", (req, res) => {
     getGameFromReq,
     either.match(errorToBadRequest(res), ({ game }) => {
       if (!Game.isGameWithDice(game)) {
-        return res.send(throwDiceButton());
+        return res.render("throwDiceButton", { label: "Throw dice" });
       }
 
       const { round } = game;
       if (round === 3) {
         return res.send("");
       }
-      return res.send(throwDiceButton("Throw not selected dice"));
+      return res.render("throwDiceButton", {
+        label: "Throw not selected dice",
+      });
     })
   );
 });
