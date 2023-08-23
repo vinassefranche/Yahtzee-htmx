@@ -30,21 +30,13 @@ const scoreLabels: Record<Score.ScoreType | "bonus", string> = {
   bonus: "Bonus (if more than 62)",
 };
 
-const dieNumberToClass = (number: Die.DieNumber) => {
-  switch (number) {
-    case 1:
-      return "one";
-    case 2:
-      return "two";
-    case 3:
-      return "three";
-    case 4:
-      return "four";
-    case 5:
-      return "five";
-    case 6:
-      return "six";
-  }
+const dieNumberToClass: Record<Die.DieNumber, string> = {
+  1: "one",
+  2: "two",
+  3: "three",
+  4: "four",
+  5: "five",
+  6: "six",
 };
 
 const generateScoreTable = (game: Game.Game) =>
@@ -194,7 +186,7 @@ app.put("/throw", (req, res) => {
       games[gameUuid] = updatedGame;
       res.header("hx-trigger-after-settle", "dice-thrown").render("dice", {
         dice: updatedGame.dice.map((die, index) => ({
-          class: dieNumberToClass(die.number),
+          class: dieNumberToClass[die.number],
           selected: die.selected,
           index,
         })),
@@ -225,7 +217,7 @@ app.put("/select/:diceIndex", (req, res) => {
         games[gameUuid] = updatedGame;
         const die = updatedGame.dice[diceIndex];
         res.render("die", {
-          class: dieNumberToClass(die.number),
+          class: dieNumberToClass[die.number],
           selected: die.selected,
           index: diceIndex,
         });
