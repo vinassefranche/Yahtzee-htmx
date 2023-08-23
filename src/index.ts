@@ -3,9 +3,13 @@ import express, { Response } from "express";
 import { Dice, Die, Game, Score } from "./domain";
 import { pipe } from "fp-ts/lib/function";
 import { either } from "fp-ts";
+import { engine } from "express-handlebars";
+import path from "path";
 
 const app = express();
-const port = 3000;
+app.engine("handlebars", engine({ defaultLayout: false }));
+app.set("view engine", "handlebars");
+app.set("views", path.join(__dirname, "views"));
 
 app.use(express.static("build"));
 
@@ -114,46 +118,14 @@ const generateScoreHtml = (game: Game.Game) => {
 };
 
 app.get("/", (_, res) => {
-  const uuid = randomUUID();
+  const gameUuid = randomUUID();
   const game = Game.create();
-  games[uuid] = game;
-  res.header("Content-Type", "text/html").send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-      <meta charset="utf-8">
-        <title>Yams</title>
-        <script src="https://unpkg.com/htmx.org/dist/htmx.js" ></script>
-        <link rel="stylesheet" href="/style.css" />
-      </head>
-      <body class="flex flex-col gap-4 pt-24 items-center h-screen" hx-headers='{"game-uuid": "${uuid}"}'>
-        <div
-          hx-get="/score"
-          hx-trigger="load, game-reset from:body, score-updated from:body"
-          class="flex flex-col gap-2 items-center"
-        >${generateScoreHtml(game)}</div>
-        <div id="game" class="flex flex-col gap-6 items-center">
-          <div id="dice" class="flex gap-2 bg-green-700 p-6 w-[205px] h-[73px]">
-          </div>
-          <div class="flex gap-2">
-            <div
-              class="h-8"
-              hx-trigger="load, dice-thrown from:body, game-reset from:body, score-updated from:body"
-              hx-get="/main-button"
-            >${throwDiceButton()}</div>
-            <button hx-post="/reset" hx-target="#dice" class="bg-red-400 text-white rounded-md px-2 py-1">
-              Reset
-            </button>
-          </div>
-        </div>
-        <div
-          hx-get="/score-options"
-          hx-trigger="load, dice-thrown from:body, game-reset from:body, score-updated from:body"
-          class="flex flex-col gap-2 items-center"
-        ></div>
-      </body>
-    </html>
-  `);
+  games[gameUuid] = game;
+  res.render("index", {
+    gameUuid,
+    score: generateScoreHtml(game),
+    throwDiceButton: throwDiceButton(),
+  });
 });
 
 const getGameFromReq = (req: express.Request) => {
@@ -312,6 +284,7 @@ app.put("/select/:diceIndex", (req, res) => {
   );
 });
 
+const port = 3000;
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
