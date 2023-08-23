@@ -167,25 +167,13 @@ app.get("/score-options", (req, res) => {
         return;
       }
 
-      const scoreOptions = Game.getScoreOptions(game);
-      res.send(`
-        <div class="grid grid-cols-4 gap-2">
-          ${scoreOptions
-            .map(
-              ({ score, scoreType }) =>
-                `<button
-                  class="${
-                    score === 0 ? "bg-gray-500" : "bg-cyan-500"
-                  } text-white rounded-md px-2 py-1"
-                  hx-put="/score/${scoreType}"
-                  hx-target="#dice"
-                >
-                  ${scoreLabels[scoreType]} (${score})
-                </button>`
-            )
-            .join("")}
-        </div>
-      `);
+      res.render("scoreOptions", {
+        scoreOptions: Game.getScoreOptions(game).map((scoreOption) => ({
+          score: scoreOption.score,
+          scoreType: scoreOption.scoreType,
+          label: scoreLabels[scoreOption.scoreType],
+        })),
+      });
     })
   );
 });
