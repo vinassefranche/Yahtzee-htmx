@@ -47,23 +47,7 @@ const dieNumberToClass = (number: Die.DieNumber) => {
   }
 };
 
-const generateDieHtml = ({ die, index }: { die: Die.Die; index: number }) => `
-    <div
-      class="die ${dieNumberToClass(
-        die.number
-      )} text-4xl leading-6 w-6 flex justify-center ${
-  die.selected ? "bg-black text-white" : "not-selected"
-}"
-      hx-put="/select/${index}"
-      hx-swap="outerHTML"
-    >
-    </div>
-  `;
-
 const games: Record<string, Game.Game> = {};
-
-const generateDiceHtml = (dice: Dice.Dice) =>
-  `${dice.map((die, index) => generateDieHtml({ die, index })).join("")}`;
 
 const generateScoreHtml = (game: Game.Game) => {
   const scoreTable = [
@@ -218,9 +202,13 @@ app.put("/throw", (req, res) => {
     either.bind("updatedGame", ({ game }) => Game.throwDice(game)),
     either.match(errorToBadRequest(res), ({ gameUuid, updatedGame }) => {
       games[gameUuid] = updatedGame;
-      res
-        .header("hx-trigger-after-settle", "dice-thrown")
-        .send(generateDiceHtml(updatedGame.dice));
+      res.header("hx-trigger-after-settle", "dice-thrown").render("dice", {
+        dice: updatedGame.dice.map((die, index) => ({
+          class: dieNumberToClass(die.number),
+          selected: die.selected,
+          index,
+        })),
+      });
     })
   );
 });
@@ -245,12 +233,12 @@ app.put("/select/:diceIndex", (req, res) => {
       errorToBadRequest(res),
       ({ gameUuid, updatedGame, diceIndex }) => {
         games[gameUuid] = updatedGame;
-        res.send(
-          generateDieHtml({
-            die: updatedGame.dice[diceIndex],
-            index: diceIndex,
-          })
-        );
+        const die = updatedGame.dice[diceIndex];
+        res.render("die", {
+          class: dieNumberToClass(die.number),
+          selected: die.selected,
+          index: diceIndex,
+        });
       }
     )
   );

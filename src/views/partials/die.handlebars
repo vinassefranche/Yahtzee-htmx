@@ -1,0 +1,6 @@
+<div 
+  class="die {{class}} text-4xl leading-6 w-6 flex justify-center {{#if selected}}bg-black text-white{{else}}not-selected{{/if}}
+}" 
+  hx-put="/select/{{index}}"
+  hx-swap="outerHTML">
+</div>
