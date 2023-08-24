@@ -28,6 +28,6 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true
   },
-  "include": ["src", "scripts", "./*.ts"],
+  "include": ["src", "./*.ts"],
   "exclude": ["**/.*/"],
 }
