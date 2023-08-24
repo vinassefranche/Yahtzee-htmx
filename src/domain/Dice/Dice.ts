@@ -1,3 +1,4 @@
+import { either } from "fp-ts";
 import { Die } from "../Die";
 
 export type Dice = [Die.Die, Die.Die, Die.Die, Die.Die, Die.Die];
@@ -5,6 +6,12 @@ const diceIndexes = [0, 1, 2, 3, 4] as const;
 export type DiceIndex = (typeof diceIndexes)[number];
 export const isDiceIndex = (index: number): index is DiceIndex =>
   diceIndexes.includes(index as DiceIndex);
+
+export const parseDiceIndex = either.fromPredicate(
+  (diceIndex: unknown): diceIndex is DiceIndex =>
+    typeof diceIndex === "number" && isDiceIndex(diceIndex),
+  () => new Error("given diceIndex is not a valid one")
+);
 
 const map =
   (fn: (die: Die.Die, index: DiceIndex) => Die.Die) =>

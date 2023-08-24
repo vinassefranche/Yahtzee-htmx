@@ -30,6 +30,13 @@ export const isScorableScoreType = (
   string: string
 ): string is ScorableScoreType => isScoreType(string) && string !== "bonus";
 
+export const parseScorableScoreType = either.fromPredicate(
+  (scorableScoreType: unknown): scorableScoreType is ScorableScoreType =>
+    typeof scorableScoreType === "string" &&
+    isScorableScoreType(scorableScoreType),
+  () => new Error("given scoreType is not a valid one")
+);
+
 export const initializeScore = () =>
   scoreTypes.reduce(
     (acc, scoreType) => {

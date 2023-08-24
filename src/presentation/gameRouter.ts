@@ -153,14 +153,9 @@ export const buildGameRouter = ({
       req,
       getGameIdFromReq,
       either.bindTo("gameId"),
-      either.bind("scoreType", () =>
-        pipe(
-          req.params.scoreType,
-          either.fromPredicate(
-            Score.isScorableScoreType,
-            () => new Error("given scoreType is not a valid one")
-          )
-        )
+      either.apS(
+        "scoreType",
+        Score.parseScorableScoreType(req.params.scoreType)
       ),
       readerTaskEither.fromEither,
       readerTaskEither.flatMap(addScoreForScoreType),
@@ -207,14 +202,9 @@ export const buildGameRouter = ({
       req,
       getGameIdFromReq,
       either.bindTo("gameId"),
-      either.bind("diceIndex", () =>
-        pipe(
-          parseInt(req.params.diceIndex),
-          either.fromPredicate(
-            Dice.isDiceIndex,
-            () => new Error("given diceIndex is not a valid one")
-          )
-        )
+      either.apS(
+        "diceIndex",
+        Dice.parseDiceIndex(parseInt(req.params.diceIndex))
       ),
       readerTaskEither.fromEither,
       readerTaskEither.bind("updatedGame", toggleDieSelection),
