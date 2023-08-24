@@ -1,9 +1,10 @@
 import express, { Response } from "express";
 import { engine } from "express-handlebars";
-import { either, option } from "fp-ts";
+import { taskEither } from "fp-ts";
 import { pipe } from "fp-ts/lib/function";
 import path from "path";
 import { Dice, Die, Game, Score } from "./domain";
+import { buildInMemoryGameRepository } from "./infrastructure/InMemoryGameRepository";
 
 const app = express();
 app.engine("handlebars", engine({ defaultLayout: false }));
@@ -64,41 +65,43 @@ const generateScoreTable = (game: Game.Game) =>
     },
   }));
 
-type Games = ReadonlyArray<Game.Game>;
-let games: Games = [];
-const upsertGame = (game: Game.Game) => {
-  games = games.filter(({ id }) => id !== game.id).concat(game);
-};
+const gameRepository = buildInMemoryGameRepository();
 
 const getGameFromReq = (req: express.Request) =>
   pipe(
     req.headers["game-uuid"],
     Game.parseGameId,
-    either.map((gameUuid) =>
-      option.fromNullable(games.find((game) => game.id === gameUuid))
-    ),
-    either.flatMap(either.fromOption(() => new Error("game not found")))
+    taskEither.fromEither,
+    taskEither.flatMap(gameRepository.getById)
   );
 
 const errorToBadRequest = (response: Response) => (error: Error) => {
   response.status(400).send(`Bad request: ${error.message}`);
 };
 
+const errorToInternalError = (response: Response) => (_: Error) => {
+  response.status(500);
+};
+
 app.get("/", (_, res) => {
-  const game = Game.create();
-  upsertGame(game);
-  res.render("index", {
-    gameUuid: game.id,
-    scoreTable: generateScoreTable(game),
-    throwDiceButtonLabel: "Throw dice",
-  });
+  pipe(
+    Game.create(),
+    gameRepository.store,
+    taskEither.match(errorToInternalError(res), (game) => {
+      res.render("index", {
+        gameUuid: game.id,
+        scoreTable: generateScoreTable(game),
+        throwDiceButtonLabel: "Throw dice",
+      });
+    })
+  )();
 });
 
 app.get("/main-button", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.match(errorToBadRequest(res), (game) => {
+    taskEither.match(errorToBadRequest(res), (game) => {
       const { round } = game;
       if (round === 3) {
         return res.send("");
@@ -107,25 +110,26 @@ app.get("/main-button", (req, res) => {
         label: round === 0 ? "Throw dice" : "Throw not selected dice",
       });
     })
-  );
+  )();
 });
 
 app.post("/reset", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.match(errorToBadRequest(res), (game) => {
-      upsertGame(Game.reset(game));
+    taskEither.map(Game.reset),
+    taskEither.flatMap(gameRepository.store),
+    taskEither.match(errorToBadRequest(res), () => {
       res.header("hx-trigger", "game-reset").send("");
     })
-  );
+  )();
 });
 
 app.get("/score-options", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.match(errorToBadRequest(res), (game) => {
+    taskEither.match(errorToBadRequest(res), (game) => {
       if (!Game.isGameWithDice(game)) {
         res.send("");
         return;
@@ -139,82 +143,86 @@ app.get("/score-options", (req, res) => {
         })),
       });
     })
-  );
+  )();
 });
 
 app.put("/score/:scoreType", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.bindTo("game"),
-    either.bind("scoreType", () =>
+    taskEither.bindTo("game"),
+    taskEither.bind("scoreType", () =>
       pipe(
         req.params.scoreType,
-        either.fromPredicate(
+        taskEither.fromPredicate(
           Score.isScorableScoreType,
           () => new Error("Bad request: given scoreType is not a valid one")
         )
       )
     ),
-    either.bind("updatedGame", ({ game, scoreType }) =>
+    taskEither.flatMapEither(({ game, scoreType }) =>
       Game.addScoreForScoreType(scoreType)(game)
     ),
-    either.match(errorToBadRequest(res), ({ updatedGame }) => {
-      upsertGame(updatedGame);
+    taskEither.flatMap(gameRepository.store),
+    taskEither.match(errorToBadRequest(res), () => {
       res.header("hx-trigger", "score-updated").send("");
     })
-  );
+  )();
 });
 
 app.get("/score", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.match(errorToBadRequest(res), (game) => {
+    taskEither.match(errorToBadRequest(res), (game) => {
       res.render("score", {
         scoreTable: generateScoreTable(game),
       });
     })
-  );
+  )();
 });
 
 app.put("/throw", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.flatMap(Game.throwDice),
-    either.match(errorToBadRequest(res), (updatedGame) => {
-      upsertGame(updatedGame);
+    taskEither.flatMapEither(Game.throwDice),
+    taskEither.flatMap(gameRepository.store),
+    taskEither.match(errorToBadRequest(res), (game) => {
       res.header("hx-trigger-after-settle", "dice-thrown").render("dice", {
-        dice: updatedGame.dice.map((die, index) => ({
+        dice: game.dice.map((die, index) => ({
           class: dieNumberToClass[die.number],
           selected: die.selected,
           index,
         })),
       });
     })
-  );
+  )();
 });
 
 app.put("/select/:diceIndex", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.bindTo("game"),
-    either.bind("diceIndex", () =>
+    taskEither.bindTo("game"),
+    taskEither.bind("diceIndex", () =>
       pipe(
         parseInt(req.params.diceIndex),
-        either.fromPredicate(
+        taskEither.fromPredicate(
           Dice.isDiceIndex,
           () => new Error("Bad request: given diceIndex is not a valid one")
         )
       )
     ),
-    either.bind("updatedGame", ({ game, diceIndex }) =>
-      Game.toggleDieSelection(diceIndex)(game)
+    taskEither.bind("updatedGame", ({ game, diceIndex }) =>
+      pipe(
+        game,
+        Game.toggleDieSelection(diceIndex),
+        taskEither.fromEither,
+        taskEither.flatMap(gameRepository.store)
+      )
     ),
-    either.match(errorToBadRequest(res), ({ updatedGame, diceIndex }) => {
-      upsertGame(updatedGame);
+    taskEither.match(errorToBadRequest(res), ({ updatedGame, diceIndex }) => {
       const die = updatedGame.dice[diceIndex];
       res.render("die", {
         class: dieNumberToClass[die.number],
@@ -222,7 +230,7 @@ app.put("/select/:diceIndex", (req, res) => {
         index: diceIndex,
       });
     })
-  );
+  )();
 });
 
 const port = 3000;

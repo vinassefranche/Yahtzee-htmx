@@ -4,13 +4,14 @@ import { Dice } from "../Dice";
 import { Score } from "../Score";
 import { either } from "fp-ts";
 import { Either } from "fp-ts/lib/Either";
+import { TaskEither } from "fp-ts/lib/TaskEither";
 
-type Id = string & { __TYPE__: "GameId" };
+export type Id = string & { __TYPE__: "GameId" };
 const generateGameId = () => randomUUID() as Id;
 const uuidRegex =
   /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
 export const parseGameId = either.fromPredicate(
-  (uuid: unknown) => typeof uuid === "string" && uuidRegex.test(uuid),
+  (uuid: unknown): uuid is Id => typeof uuid === "string" && uuidRegex.test(uuid),
   () => new Error("given uuid is not a valid uuid")
 );
 
@@ -129,4 +130,9 @@ const increaseRound = <Round extends GameRoundThatCanBeIncreased>(
   gameRound: Round
 ): IncreasedRound<Round> => {
   return (gameRound + 1) as any;
+};
+
+export type Repository = {
+  getById: (id: Id) => TaskEither<Error, Game>;
+  store: <T extends Game>(game: T) => TaskEither<Error, T>;
 };
