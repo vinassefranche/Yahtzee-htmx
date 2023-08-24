@@ -1,6 +1,14 @@
 import express, { Request, Response } from "express";
-import { taskEither } from "fp-ts";
+import { either, readerTaskEither } from "fp-ts";
 import { pipe } from "fp-ts/lib/function";
+import {
+  addScoreForScoreType,
+  createGame,
+  getGame,
+  resetGame,
+  throwDice,
+  toggleDieSelection,
+} from "../application";
 import { Dice, Die, Game, Score } from "../domain";
 
 const scoreLabels: Record<Score.ScoreType, string> = {
@@ -63,6 +71,9 @@ const errorToInternalError = (response: Response) => (_: Error) => {
   response.status(500);
 };
 
+const getGameIdFromReq = (req: Request) =>
+  Game.parseGameId(req.headers["game-uuid"]);
+
 export const buildGameRouter = ({
   gameRepository,
 }: {
@@ -70,60 +81,57 @@ export const buildGameRouter = ({
 }) => {
   const router = express.Router();
 
-  const getGameFromReq = (req: Request) =>
-    pipe(
-      req.headers["game-uuid"],
-      Game.parseGameId,
-      taskEither.fromEither,
-      taskEither.flatMap(gameRepository.getById)
-    );
-
   router.get("/", (_, res) => {
     pipe(
-      Game.create(),
-      gameRepository.store,
-      taskEither.match(errorToInternalError(res), (game) => {
+      createGame(),
+      readerTaskEither.match(errorToInternalError(res), (game) => {
         res.render("index", {
           gameUuid: game.id,
           scoreTable: generateScoreTable(game),
           throwDiceButtonLabel: "Throw dice",
         });
       })
-    )();
+    )({ gameRepository })();
   });
 
   router.get("/main-button", (req, res) => {
     pipe(
       req,
-      getGameFromReq,
-      taskEither.match(errorToBadRequest(res), (game) => {
+      getGameIdFromReq,
+      readerTaskEither.fromEither,
+      readerTaskEither.flatMap(getGame),
+      readerTaskEither.match(errorToBadRequest(res), (game) => {
         if (!Game.canThrowDice(game)) {
           return res.send("");
         }
         return res.render("throwDiceButton", {
-          label: Game.isGameWithDice(game) ? "Throw not selected dice" : "Throw dice",
+          label: Game.isGameWithDice(game)
+            ? "Throw not selected dice"
+            : "Throw dice",
         });
       })
-    )();
+    )({ gameRepository })();
   });
 
   router.post("/reset", (req, res) => {
     pipe(
       req,
-      getGameFromReq,
-      taskEither.map(Game.reset),
-      taskEither.flatMap(gameRepository.store),
-      taskEither.match(errorToBadRequest(res), () => {
+      getGameIdFromReq,
+      readerTaskEither.fromEither,
+      readerTaskEither.flatMap(resetGame),
+      readerTaskEither.match(errorToBadRequest(res), () => {
         res.header("hx-trigger", "game-reset").send("");
       })
-    )();
+    )({ gameRepository })();
   });
 
   router.get("/score-options", (req, res) => {
     pipe(
       req,
-      getGameFromReq,
-      taskEither.match(errorToBadRequest(res), (game) => {
+      getGameIdFromReq,
+      readerTaskEither.fromEither,
+      readerTaskEither.flatMap(getGame),
+      readerTaskEither.match(errorToBadRequest(res), (game) => {
         if (!Game.isGameWithDice(game)) {
           res.send("");
           return;
@@ -137,52 +145,52 @@ export const buildGameRouter = ({
           })),
         });
       })
-    )();
+    )({ gameRepository })();
   });
 
   router.put("/score/:scoreType", (req, res) => {
     pipe(
       req,
-      getGameFromReq,
-      taskEither.bindTo("game"),
-      taskEither.bind("scoreType", () =>
+      getGameIdFromReq,
+      either.bindTo("gameId"),
+      either.bind("scoreType", () =>
         pipe(
           req.params.scoreType,
-          taskEither.fromPredicate(
+          either.fromPredicate(
             Score.isScorableScoreType,
             () => new Error("Bad request: given scoreType is not a valid one")
           )
         )
       ),
-      taskEither.flatMapEither(({ game, scoreType }) =>
-        Game.addScoreForScoreType(scoreType)(game)
-      ),
-      taskEither.flatMap(gameRepository.store),
-      taskEither.match(errorToBadRequest(res), () => {
+      readerTaskEither.fromEither,
+      readerTaskEither.flatMap(addScoreForScoreType),
+      readerTaskEither.match(errorToBadRequest(res), () => {
         res.header("hx-trigger", "score-updated").send("");
       })
-    )();
+    )({ gameRepository })();
   });
 
   router.get("/score", (req, res) => {
     pipe(
       req,
-      getGameFromReq,
-      taskEither.match(errorToBadRequest(res), (game) => {
+      getGameIdFromReq,
+      readerTaskEither.fromEither,
+      readerTaskEither.flatMap(getGame),
+      readerTaskEither.match(errorToBadRequest(res), (game) => {
         res.render("score", {
           scoreTable: generateScoreTable(game),
         });
       })
-    )();
+    )({ gameRepository })();
   });
 
-  router.put("/throw", (req, res) => {
+  router.put("/throw-dice", (req, res) => {
     pipe(
       req,
-      getGameFromReq,
-      taskEither.flatMapEither(Game.throwDice),
-      taskEither.flatMap(gameRepository.store),
-      taskEither.match(errorToBadRequest(res), (game) => {
+      getGameIdFromReq,
+      readerTaskEither.fromEither,
+      readerTaskEither.flatMap(throwDice),
+      readerTaskEither.match(errorToBadRequest(res), (game) => {
         res.header("hx-trigger-after-settle", "dice-thrown").render("dice", {
           dice: game.dice.map((die, index) => ({
             class: dieNumberToClass[die.number],
@@ -191,40 +199,37 @@ export const buildGameRouter = ({
           })),
         });
       })
-    )();
+    )({ gameRepository })();
   });
 
   router.put("/select/:diceIndex", (req, res) => {
     pipe(
       req,
-      getGameFromReq,
-      taskEither.bindTo("game"),
-      taskEither.bind("diceIndex", () =>
+      getGameIdFromReq,
+      either.bindTo("gameId"),
+      either.bind("diceIndex", () =>
         pipe(
           parseInt(req.params.diceIndex),
-          taskEither.fromPredicate(
+          either.fromPredicate(
             Dice.isDiceIndex,
             () => new Error("Bad request: given diceIndex is not a valid one")
           )
         )
       ),
-      taskEither.bind("updatedGame", ({ game, diceIndex }) =>
-        pipe(
-          game,
-          Game.toggleDieSelection(diceIndex),
-          taskEither.fromEither,
-          taskEither.flatMap(gameRepository.store)
-        )
-      ),
-      taskEither.match(errorToBadRequest(res), ({ updatedGame, diceIndex }) => {
-        const die = updatedGame.dice[diceIndex];
-        res.render("die", {
-          class: dieNumberToClass[die.number],
-          selected: die.selected,
-          index: diceIndex,
-        });
-      })
-    )();
+      readerTaskEither.fromEither,
+      readerTaskEither.bind("updatedGame", toggleDieSelection),
+      readerTaskEither.match(
+        errorToBadRequest(res),
+        ({ updatedGame, diceIndex }) => {
+          const die = updatedGame.dice[diceIndex];
+          res.render("die", {
+            class: dieNumberToClass[die.number],
+            selected: die.selected,
+            index: diceIndex,
+          });
+        }
+      )
+    )({ gameRepository })();
   });
   return router;
 };
