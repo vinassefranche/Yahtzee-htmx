@@ -97,12 +97,11 @@ export const buildGameRouter = ({
       req,
       getGameFromReq,
       taskEither.match(errorToBadRequest(res), (game) => {
-        const { round } = game;
-        if (round === 3) {
+        if (!Game.canThrowDice(game)) {
           return res.send("");
         }
         return res.render("throwDiceButton", {
-          label: round === 0 ? "Throw dice" : "Throw not selected dice",
+          label: Game.isGameWithDice(game) ? "Throw not selected dice" : "Throw dice",
         });
       })
     )();
