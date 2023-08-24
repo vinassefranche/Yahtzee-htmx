@@ -158,7 +158,7 @@ export const buildGameRouter = ({
           req.params.scoreType,
           either.fromPredicate(
             Score.isScorableScoreType,
-            () => new Error("Bad request: given scoreType is not a valid one")
+            () => new Error("given scoreType is not a valid one")
           )
         )
       ),
@@ -212,7 +212,7 @@ export const buildGameRouter = ({
           parseInt(req.params.diceIndex),
           either.fromPredicate(
             Dice.isDiceIndex,
-            () => new Error("Bad request: given diceIndex is not a valid one")
+            () => new Error("given diceIndex is not a valid one")
           )
         )
       ),
