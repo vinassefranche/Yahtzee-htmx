@@ -1,10 +1,9 @@
-import { randomUUID } from "crypto";
 import express, { Response } from "express";
-import { Dice, Die, Game, Score } from "./domain";
-import { pipe } from "fp-ts/lib/function";
-import { either } from "fp-ts";
 import { engine } from "express-handlebars";
+import { either, option } from "fp-ts";
+import { pipe } from "fp-ts/lib/function";
 import path from "path";
+import { Dice, Die, Game, Score } from "./domain";
 
 const app = express();
 app.engine("handlebars", engine({ defaultLayout: false }));
@@ -65,30 +64,31 @@ const generateScoreTable = (game: Game.Game) =>
     },
   }));
 
-const games: Record<string, Game.Game> = {};
-
-const getGameFromReq = (req: express.Request) => {
-  const gameUuid = req.headers["game-uuid"];
-  if (typeof gameUuid !== "string") {
-    return either.left(new Error("game-uuid header not found"));
-  }
-  const game = games[gameUuid];
-  if (!game) {
-    return either.left(new Error("game not found"));
-  }
-  return either.right({ game, gameUuid });
+type Games = ReadonlyArray<Game.Game>;
+let games: Games = [];
+const upsertGame = (game: Game.Game) => {
+  games = games.filter(({ id }) => id !== game.id).concat(game);
 };
+
+const getGameFromReq = (req: express.Request) =>
+  pipe(
+    req.headers["game-uuid"],
+    Game.parseGameId,
+    either.map((gameUuid) =>
+      option.fromNullable(games.find((game) => game.id === gameUuid))
+    ),
+    either.flatMap(either.fromOption(() => new Error("game not found")))
+  );
 
 const errorToBadRequest = (response: Response) => (error: Error) => {
   response.status(400).send(`Bad request: ${error.message}`);
 };
 
 app.get("/", (_, res) => {
-  const gameUuid = randomUUID();
   const game = Game.create();
-  games[gameUuid] = game;
+  upsertGame(game);
   res.render("index", {
-    gameUuid,
+    gameUuid: game.id,
     scoreTable: generateScoreTable(game),
     throwDiceButtonLabel: "Throw dice",
   });
@@ -98,7 +98,7 @@ app.get("/main-button", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.match(errorToBadRequest(res), ({ game }) => {
+    either.match(errorToBadRequest(res), (game) => {
       const { round } = game;
       if (round === 3) {
         return res.send("");
@@ -114,8 +114,8 @@ app.post("/reset", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.match(errorToBadRequest(res), ({ gameUuid }) => {
-      games[gameUuid] = Game.create();
+    either.match(errorToBadRequest(res), (game) => {
+      upsertGame(Game.reset(game));
       res.header("hx-trigger", "game-reset").send("");
     })
   );
@@ -125,7 +125,7 @@ app.get("/score-options", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.match(errorToBadRequest(res), ({ game }) => {
+    either.match(errorToBadRequest(res), (game) => {
       if (!Game.isGameWithDice(game)) {
         res.send("");
         return;
@@ -146,6 +146,7 @@ app.put("/score/:scoreType", (req, res) => {
   pipe(
     req,
     getGameFromReq,
+    either.bindTo("game"),
     either.bind("scoreType", () =>
       pipe(
         req.params.scoreType,
@@ -158,8 +159,8 @@ app.put("/score/:scoreType", (req, res) => {
     either.bind("updatedGame", ({ game, scoreType }) =>
       Game.addScoreForScoreType(scoreType)(game)
     ),
-    either.match(errorToBadRequest(res), ({ gameUuid, updatedGame }) => {
-      games[gameUuid] = updatedGame;
+    either.match(errorToBadRequest(res), ({ updatedGame }) => {
+      upsertGame(updatedGame);
       res.header("hx-trigger", "score-updated").send("");
     })
   );
@@ -169,7 +170,7 @@ app.get("/score", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.match(errorToBadRequest(res), ({ game }) => {
+    either.match(errorToBadRequest(res), (game) => {
       res.render("score", {
         scoreTable: generateScoreTable(game),
       });
@@ -181,9 +182,9 @@ app.put("/throw", (req, res) => {
   pipe(
     req,
     getGameFromReq,
-    either.bind("updatedGame", ({ game }) => Game.throwDice(game)),
-    either.match(errorToBadRequest(res), ({ gameUuid, updatedGame }) => {
-      games[gameUuid] = updatedGame;
+    either.flatMap(Game.throwDice),
+    either.match(errorToBadRequest(res), (updatedGame) => {
+      upsertGame(updatedGame);
       res.header("hx-trigger-after-settle", "dice-thrown").render("dice", {
         dice: updatedGame.dice.map((die, index) => ({
           class: dieNumberToClass[die.number],
@@ -199,6 +200,7 @@ app.put("/select/:diceIndex", (req, res) => {
   pipe(
     req,
     getGameFromReq,
+    either.bindTo("game"),
     either.bind("diceIndex", () =>
       pipe(
         parseInt(req.params.diceIndex),
@@ -211,18 +213,15 @@ app.put("/select/:diceIndex", (req, res) => {
     either.bind("updatedGame", ({ game, diceIndex }) =>
       Game.toggleDieSelection(diceIndex)(game)
     ),
-    either.match(
-      errorToBadRequest(res),
-      ({ gameUuid, updatedGame, diceIndex }) => {
-        games[gameUuid] = updatedGame;
-        const die = updatedGame.dice[diceIndex];
-        res.render("die", {
-          class: dieNumberToClass[die.number],
-          selected: die.selected,
-          index: diceIndex,
-        });
-      }
-    )
+    either.match(errorToBadRequest(res), ({ updatedGame, diceIndex }) => {
+      upsertGame(updatedGame);
+      const die = updatedGame.dice[diceIndex];
+      res.render("die", {
+        class: dieNumberToClass[die.number],
+        selected: die.selected,
+        index: diceIndex,
+      });
+    })
   );
 });
 
