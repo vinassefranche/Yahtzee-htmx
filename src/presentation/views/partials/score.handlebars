@@ -1,20 +1,30 @@
-<div class="grid grid-cols-4">
-  {{#each scoreTable}}
-  {{#with this.first}}
-  <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}}">
-    {{label}}
+<div class="flex flex-col items-center">
+  {{#if isGameOver}}
+  <h1 class="text-2xl font-semibold text-green-600 mb-6">Game over!</h1>
+  {{else}}
+  <div class="h-14"></div>
+  {{/if}}
+  <div class="grid grid-cols-4">
+    {{#each scoreTable}}
+    {{#with this.first}}
+    <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}}">
+      {{label}}
+    </div>
+    <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}} border-l-0">
+      {{score}}
+    </div>
+    {{/with}}
+    {{#with this.second}}
+    <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}} border-l-0">
+      {{label}}
+    </div>
+    <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}} border-l-0">
+      {{score}}
+    </div>
+    {{/with}}
+    {{/each}}
   </div>
-  <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}} border-l-0">
-    {{score}}
-  </div>
-  {{/with}}
-  {{#with this.second}}
-  <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}} border-l-0">
-    {{label}}
-  </div>
-  <div class="p-1 border border-solid border-black {{#if @first}}{{else}}border-t-0{{/if}} border-l-0">
-    {{score}}
-  </div>
-  {{/with}}
-  {{/each}}
+  {{#if isGameOver}}
+  <h1 class="text-2xl font-semibold mt-4 h-[calc(73px-1rem)]">Total score is: {{totalScore}}</h1>
+  {{/if}}
 </div>

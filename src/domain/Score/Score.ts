@@ -57,6 +57,12 @@ const isEligibleForBonus = (score: Score) => {
   return sumOfNumbers >= 62;
 };
 
+export const isCompleted = (score: Score) =>
+  scoreTypes.every((scoreType) => score[scoreType] !== null);
+
+export const total = (score: Score) =>
+  scoreTypes.reduce((acc, scoreType) => acc + (score[scoreType] ?? 0), 0);
+
 export const addScoreForScoreType =
   ({ dice, scoreType }: { dice: Dice.Dice; scoreType: ScorableScoreType }) =>
   (score: Score) => {

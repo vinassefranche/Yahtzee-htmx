@@ -44,7 +44,9 @@ export type Game = GameWithDice | GameWithoutDice;
 export const isGameWithDice = (game: Game): game is GameWithDice =>
   game.dice !== null;
 
-export const canThrowDice = (game: Game) => game.round !== 3;
+export const isOver = (game: Game) => Score.isCompleted(game.score);
+
+export const canThrowDice = (game: Game) => game.round !== 3 && !isOver(game);
 
 export const create = (): Game => ({
   dice: null,
@@ -53,12 +55,22 @@ export const create = (): Game => ({
   id: generateGameId(),
 });
 
-export const startRound1 = (game: Game): GameWithDice => ({
-  dice: Dice.initializeDice(),
-  round: 1,
-  score: game.score,
-  id: game.id,
-});
+export const startRound1 = (game: Game) =>
+  pipe(
+    game,
+    either.fromPredicate(
+      (game) => !isOver(game),
+      () => new Error("Game is over")
+    ),
+    either.map(
+      (game): GameWithDice => ({
+        dice: Dice.initializeDice(),
+        round: 1,
+        score: game.score,
+        id: game.id,
+      })
+    )
+  );
 
 export const reset = (game: Game): Game => ({
   dice: null,
@@ -104,7 +116,7 @@ export const toggleDieSelection = (dieIndex: Dice.DiceIndex) =>
 
 export const throwDice = (game: Game): Either<Error, GameWithDice> => {
   if (!isGameWithDice(game)) {
-    return either.right(startRound1(game));
+    return startRound1(game);
   } else {
     return pipe(
       game.round,
@@ -134,6 +146,8 @@ const increaseRound = <Round extends GameRoundThatCanBeIncreased>(
 ): IncreasedRound<Round> => {
   return (gameRound + 1) as any;
 };
+
+export const totalScore = (game: Game) => Score.total(game.score);
 
 export type Repository = {
   getById: (id: Id) => TaskEither<Error, Game>;

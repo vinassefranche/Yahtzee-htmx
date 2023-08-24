@@ -120,7 +120,9 @@ export const buildGameRouter = ({
       readerTaskEither.fromEither,
       readerTaskEither.flatMap(resetGame),
       readerTaskEither.match(errorToBadRequest(res), () => {
-        res.header("hx-trigger", "game-reset").send("");
+        res.header("hx-trigger", "game-reset").render("dice", {
+          dice: [],
+        });
       })
     )({ gameRepository })();
   });
@@ -159,8 +161,15 @@ export const buildGameRouter = ({
       ),
       readerTaskEither.fromEither,
       readerTaskEither.flatMap(addScoreForScoreType),
-      readerTaskEither.match(errorToBadRequest(res), () => {
-        res.header("hx-trigger", "score-updated").send("");
+      readerTaskEither.match(errorToBadRequest(res), (game) => {
+        res.header("hx-trigger", "score-updated")
+        if(Game.isOver(game)) {
+          res.send('');
+          return;
+        }
+        res.render("dice", {
+          dice: []
+        });
       })
     )({ gameRepository })();
   });
@@ -174,6 +183,8 @@ export const buildGameRouter = ({
       readerTaskEither.match(errorToBadRequest(res), (game) => {
         res.render("score", {
           scoreTable: generateScoreTable(game),
+          isGameOver: Game.isOver(game),
+          totalScore: Game.totalScore(game),
         });
       })
     )({ gameRepository })();
