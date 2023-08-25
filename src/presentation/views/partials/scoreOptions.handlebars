@@ -1,0 +1,6 @@
+{{#each scoreOptions}}
+<button class="{{#if this.score}}bg-cyan-500{{else}}bg-gray-500{{/if}} text-white rounded-md px-2 py-1"
+  hx-put="/score/{{this.scoreType}}" hx-target="#dice">
+  {{this.label}} ({{this.score}})
+</button>
+{{/each}}

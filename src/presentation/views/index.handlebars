@@ -14,7 +14,7 @@
   </div>
   <div id="game" class="flex flex-col gap-6 items-center">
     <div id="dice">
-      {{> dice dice=[]}}
+      {{> dice }}
     </div>
     <div class="flex gap-2">
       <div class="h-8" hx-trigger="load, dice-thrown from:body, game-reset from:body, score-updated from:body"
@@ -25,7 +25,9 @@
     </div>
   </div>
   <div hx-get="/score-options" hx-trigger="load, dice-thrown from:body, game-reset from:body, score-updated from:body"
-    class="flex flex-col gap-2 items-center"></div>
+    class="grid grid-cols-4 gap-2">
+    {{> scoreOptions }}
+  </div>
 </body>
 
 </html>
