@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 
-<body class="flex flex-col gap-4 pt-24 items-center h-screen" hx-headers='{"game-uuid": "{{{gameUuid}}}"}'>
+<body class="flex flex-col gap-4 pt-24 items-center h-screen" hx-headers='{"game-id": "{{{gameId}}}"}'>
   <div hx-get="/score" hx-trigger="load, game-reset from:body, score-updated from:body"
     class="flex flex-col gap-2 items-center">{{> score }}</div>
   </div>

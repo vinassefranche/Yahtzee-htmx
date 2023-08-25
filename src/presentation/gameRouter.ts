@@ -72,7 +72,7 @@ const errorToInternalError = (response: Response) => (_: Error) => {
 };
 
 const getGameIdFromReq = (req: Request) =>
-  Game.parseGameId(req.headers["game-uuid"]);
+  Game.parseGameId(req.headers["game-id"]);
 
 export const buildGameRouter = ({
   gameRepository,
@@ -86,7 +86,7 @@ export const buildGameRouter = ({
       createGame(),
       readerTaskEither.match(errorToInternalError(res), (game) => {
         res.render("index", {
-          gameUuid: game.id,
+          gameId: game.id,
           scoreTable: generateScoreTable(game),
           throwDiceButtonLabel: "Throw dice",
         });
