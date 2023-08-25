@@ -2,26 +2,30 @@ import { either } from "fp-ts";
 import { Dice } from "../Dice";
 import { Die } from "../Die";
 import { pipe } from "fp-ts/lib/function";
+import * as Codec from "io-ts/Codec";
 
-const scoreTypes = [
-  "ones",
-  "twos",
-  "threes",
-  "fours",
-  "fives",
-  "sixes",
-  "bonus",
-  "threeOfAKind",
-  "fourOfAKind",
-  "fullHouse",
-  "smallStraight",
-  "largeStraight",
-  "yams",
-  "chance",
-] as const;
-export type ScoreType = (typeof scoreTypes)[number];
+const codecProps = {
+  ones: Codec.nullable(Codec.number),
+  twos: Codec.nullable(Codec.number),
+  threes: Codec.nullable(Codec.number),
+  fours: Codec.nullable(Codec.number),
+  fives: Codec.nullable(Codec.number),
+  sixes: Codec.nullable(Codec.number),
+  bonus: Codec.nullable(Codec.number),
+  threeOfAKind: Codec.nullable(Codec.number),
+  fourOfAKind: Codec.nullable(Codec.number),
+  fullHouse: Codec.nullable(Codec.number),
+  smallStraight: Codec.nullable(Codec.number),
+  largeStraight: Codec.nullable(Codec.number),
+  yams: Codec.nullable(Codec.number),
+  chance: Codec.nullable(Codec.number),
+} as const;
+export const codec = Codec.struct(codecProps);
+export type Score = Codec.TypeOf<typeof codec>;
+
+export type ScoreType = keyof typeof codecProps;
+const scoreTypes = Object.keys(codecProps) as ReadonlyArray<ScoreType>;
 export type ScorableScoreType = Exclude<ScoreType, "bonus">;
-export type Score = Record<ScoreType, number | null>;
 
 export const isScoreType = (string: string): string is ScoreType =>
   scoreTypes.includes(string as ScoreType);
@@ -39,11 +43,8 @@ export const parseScorableScoreType = either.fromPredicate(
 
 export const initializeScore = () =>
   scoreTypes.reduce(
-    (acc, scoreType) => {
-      acc[scoreType] = null;
-      return acc;
-    },
-    { bonus: null } as Score
+    (acc, scoreType) => ({ ...acc, [scoreType]: null }),
+    {} as Score
   );
 
 const isEligibleForBonus = (score: Score) => {

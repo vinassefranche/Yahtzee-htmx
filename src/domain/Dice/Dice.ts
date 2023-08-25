@@ -1,9 +1,27 @@
 import { either } from "fp-ts";
 import { Die } from "../Die";
+import * as Codec from "io-ts/Codec";
 
-export type Dice = [Die.Die, Die.Die, Die.Die, Die.Die, Die.Die];
-const diceIndexes = [0, 1, 2, 3, 4] as const;
-export type DiceIndex = (typeof diceIndexes)[number];
+type TupleIndices<T extends readonly any[]> = Extract<
+  keyof T,
+  `${number}`
+> extends `${infer N extends number}`
+  ? N
+  : never;
+
+const tupleCodecProps = [
+  Die.codec,
+  Die.codec,
+  Die.codec,
+  Die.codec,
+  Die.codec,
+] as const;
+
+export const codec = Codec.tuple(...tupleCodecProps);
+
+export type Dice = Codec.TypeOf<typeof codec>;
+export type DiceIndex = TupleIndices<typeof tupleCodecProps>;
+const diceIndexes = Array.from(tupleCodecProps.keys()) as DiceIndex[];
 export const isDiceIndex = (index: number): index is DiceIndex =>
   diceIndexes.includes(index as DiceIndex);
 

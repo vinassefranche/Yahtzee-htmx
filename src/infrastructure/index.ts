@@ -1,1 +1,2 @@
-export * from './InMemoryGameRepository'
+export * from "./FileSqliteGameRepository";
+export * from "./InMemoryGameRepository";

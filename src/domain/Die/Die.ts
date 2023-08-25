@@ -1,6 +1,12 @@
+import * as Codec from "io-ts/Codec";
+
 export const dieNumbers = [1, 2, 3, 4, 5, 6] as const;
 export type DieNumber = (typeof dieNumbers)[number];
-export type Die = { number: DieNumber; selected: boolean };
+export const codec = Codec.struct({
+  number: Codec.literal(...dieNumbers),
+  selected: Codec.boolean,
+});
+export type Die = Codec.TypeOf<typeof codec>;
 
 export const sumAll = (dice: ReadonlyArray<Die>) =>
   dice.reduce((acc, die) => acc + die.number, 0);

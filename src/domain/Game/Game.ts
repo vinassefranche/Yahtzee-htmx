@@ -1,10 +1,16 @@
-import { flow, pipe } from "fp-ts/lib/function";
+import { flow, identity, pipe } from "fp-ts/lib/function";
 import { randomUUID } from "crypto";
 import { Dice } from "../Dice";
 import { Score } from "../Score";
 import { either } from "fp-ts";
 import { Either } from "fp-ts/lib/Either";
 import { TaskEither } from "fp-ts/lib/TaskEither";
+import * as Codec from "io-ts/Codec";
+import * as Decoder from "io-ts/Decoder";
+
+export const codecTypeGuard: <A = never>() => <I, O>(
+  codec: Codec.Codec<I, O, A>
+) => Codec.Codec<I, O, A> = () => identity;
 
 export type Id = string & { __TYPE__: "GameId" };
 const generateGameId = () => randomUUID() as Id;
@@ -14,6 +20,18 @@ export const parseGameId = either.fromPredicate(
   (uuid: unknown): uuid is Id =>
     typeof uuid === "string" && uuidRegex.test(uuid),
   () => new Error("given uuid is not a valid uuid")
+);
+const idCodec = Codec.make(
+  {
+    decode: (v: unknown) =>
+      pipe(
+        parseGameId(v),
+        either.mapLeft((error) => Decoder.error(v, error.message))
+      ),
+  },
+  {
+    encode: (id) => id as string,
+  }
 );
 
 const gameRounds = [0, 1, 2, 3] as const;
@@ -25,6 +43,34 @@ export const isGameRound = (round: number): round is GameRound =>
 export const isGameRoundThatCanBeIncreased = (
   round: GameRound
 ): round is GameRoundThatCanBeIncreased => round !== 3;
+
+const gameSumCodec = {
+  0: Codec.struct({
+    round: Codec.literal(0),
+    dice: Codec.literal(null),
+  }),
+  "1": Codec.struct({
+    round: Codec.literal(1),
+    dice: Dice.codec,
+  }),
+  "2": Codec.struct({
+    round: Codec.literal(2),
+    dice: Dice.codec,
+  }),
+  "3": Codec.struct({
+    round: Codec.literal(3),
+    dice: Dice.codec,
+  }),
+} satisfies Record<GameRound, Codec.Codec<unknown, any, any>>;
+
+export const codec = pipe(
+  Codec.struct({
+    score: Score.codec,
+    id: idCodec,
+  }),
+  Codec.intersect(Codec.sum("round")(gameSumCodec)),
+  codecTypeGuard<Game>()
+);
 
 type BaseGame = {
   id: Id;

@@ -8,3 +8,4 @@ yalc.lock
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+src/infrastructure/games.db
