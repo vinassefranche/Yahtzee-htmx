@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import express, { Request, Response } from "express";
-import { readerTaskEither, readonlyArray } from "fp-ts";
+import { readonlyArray } from "fp-ts";
 import { pipe } from "fp-ts/lib/function";
 import {
   addScoreForScoreType,
@@ -91,17 +91,12 @@ const errorToInternalError = (response: Response) => (error: Error) => {
 };
 
 const getGameIdFromReq = (req: Request) =>
-  Game.parseGameId(req.headers["game-id"]);
-
-const getGameIdFromReqEffect = (req: Request) =>
   Game.parseGameIdEffect(req.headers["game-id"]);
 
 export const buildGameRouter = ({
   gameRepository,
-  gameRepositoryEffect,
 }: {
-  gameRepository: Game.GameRepository;
-  gameRepositoryEffect: Game.GameRepositoryEffect;
+  gameRepository: Game.GameRepositoryEffect;
 }) => {
   const router = express.Router();
 
@@ -112,7 +107,7 @@ export const buildGameRouter = ({
       program,
       Effect.provideService(
         Game.GameRepository,
-        Game.GameRepository.of(gameRepositoryEffect)
+        Game.GameRepository.of(gameRepository)
       ),
       Effect.runPromise
     );
@@ -133,18 +128,17 @@ export const buildGameRouter = ({
   router.get("/game/:uuid", (req, res) => {
     pipe(
       req.params.uuid,
-      Game.parseGameId,
-      readerTaskEither.fromEither,
-      readerTaskEither.flatMap(getGame),
-      readerTaskEither.match(
-        (error) => {
+      Game.parseGameIdEffect,
+      Effect.flatMap(getGame),
+      Effect.match({
+        onFailure: (error) => {
           if (error.message === "game not found") {
             res.redirect("/");
             return;
           }
           errorToBadRequest(res)(error);
         },
-        (game) => {
+        onSuccess: (game) => {
           res.render("index", {
             gameId: game.id,
             scoreTable: generateScoreTable(game),
@@ -156,34 +150,38 @@ export const buildGameRouter = ({
               : "Throw dice",
             scoreOptions: getScoreOptionsForTemplate(game),
           });
-        }
-      )
-    )({ gameRepository })();
+        },
+      }),
+      runProgramWithDependencies
+    );
   });
 
   router.get("/main-button", (req, res) => {
     pipe(
       req,
       getGameIdFromReq,
-      readerTaskEither.fromEither,
-      readerTaskEither.flatMap(getGame),
-      readerTaskEither.match(errorToBadRequest(res), (game) => {
-        if (!Game.canThrowDice(game)) {
-          return res.send("");
-        }
-        return res.render("throwDiceButton", {
-          label: Game.isGameWithDice(game)
-            ? "Throw not selected dice"
-            : "Throw dice",
-        });
-      })
-    )({ gameRepository })();
+      Effect.flatMap(getGame),
+      Effect.match({
+        onFailure: errorToBadRequest(res),
+        onSuccess: (game) => {
+          if (!Game.canThrowDice(game)) {
+            return res.send("");
+          }
+          return res.render("throwDiceButton", {
+            label: Game.isGameWithDice(game)
+              ? "Throw not selected dice"
+              : "Throw dice",
+          });
+        },
+      }),
+      runProgramWithDependencies
+    );
   });
 
   router.post("/reset", (req, res) => {
     pipe(
       req,
-      getGameIdFromReqEffect,
+      getGameIdFromReq,
       Effect.flatMap(resetGame),
       Effect.match({
         onFailure: errorToBadRequest(res),
@@ -201,20 +199,23 @@ export const buildGameRouter = ({
     pipe(
       req,
       getGameIdFromReq,
-      readerTaskEither.fromEither,
-      readerTaskEither.flatMap(getGame),
-      readerTaskEither.match(errorToBadRequest(res), (game) => {
-        res.render("scoreOptions", {
-          scoreOptions: getScoreOptionsForTemplate(game),
-        });
-      })
-    )({ gameRepository })();
+      Effect.flatMap(getGame),
+      Effect.match({
+        onFailure: errorToBadRequest(res),
+        onSuccess: (game) => {
+          res.render("scoreOptions", {
+            scoreOptions: getScoreOptionsForTemplate(game),
+          });
+        },
+      }),
+      runProgramWithDependencies
+    );
   });
 
   router.put("/score/:scoreType", (req, res) => {
     pipe(
       req,
-      getGameIdFromReqEffect,
+      getGameIdFromReq,
       Effect.bindTo("gameId"),
       Effect.bind("scoreType", () =>
         Score.parseScorableScoreType(req.params.scoreType)
@@ -241,22 +242,25 @@ export const buildGameRouter = ({
     pipe(
       req,
       getGameIdFromReq,
-      readerTaskEither.fromEither,
-      readerTaskEither.flatMap(getGame),
-      readerTaskEither.match(errorToBadRequest(res), (game) => {
-        res.render("score", {
-          scoreTable: generateScoreTable(game),
-          isGameOver: Game.isOver(game),
-          totalScore: Game.totalScore(game),
-        });
-      })
-    )({ gameRepository })();
+      Effect.flatMap(getGame),
+      Effect.match({
+        onFailure: errorToBadRequest(res),
+        onSuccess: (game) => {
+          res.render("score", {
+            scoreTable: generateScoreTable(game),
+            isGameOver: Game.isOver(game),
+            totalScore: Game.totalScore(game),
+          });
+        },
+      }),
+      runProgramWithDependencies
+    );
   });
 
   router.put("/throw-dice", (req, res) => {
     pipe(
       req,
-      getGameIdFromReqEffect,
+      getGameIdFromReq,
       Effect.flatMap(throwDice),
       Effect.match({
         onFailure: errorToBadRequest(res),
@@ -273,7 +277,7 @@ export const buildGameRouter = ({
   router.put("/select/:diceIndex", (req, res) => {
     pipe(
       req,
-      getGameIdFromReqEffect,
+      getGameIdFromReq,
       Effect.bindTo("gameId"),
       Effect.bind("diceIndex", () =>
         Dice.parseDiceIndex(parseInt(req.params.diceIndex))

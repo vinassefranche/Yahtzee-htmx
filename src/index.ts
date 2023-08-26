@@ -2,8 +2,7 @@ import express from "express";
 import { engine } from "express-handlebars";
 import path from "path";
 import {
-  buildFileSqliteGameRepository,
-  buildFileSqliteGameRepositoryEffect,
+  buildFileSqliteGameRepositoryEffect
 } from "./infrastructure";
 import { buildGameRouter } from "./presentation";
 
@@ -14,9 +13,8 @@ app.set("views", path.join(__dirname, "presentation", "views"));
 
 app.use(express.static("build"));
 
-const gameRepository = buildFileSqliteGameRepository();
-const gameRepositoryEffect = buildFileSqliteGameRepositoryEffect();
-app.use(buildGameRouter({ gameRepository, gameRepositoryEffect }));
+const gameRepository = buildFileSqliteGameRepositoryEffect();
+app.use(buildGameRouter({ gameRepository }));
 
 const port = 3000;
 app.listen(port, () => {
