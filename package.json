@@ -4,6 +4,7 @@
   "main": "index.ts",
   "license": "MIT",
   "dependencies": {
+    "effect": "^2.0.0-next.29",
     "express": "^4.18.2",
     "express-handlebars": "^7.1.2",
     "fp-ts": "^2.16.1",

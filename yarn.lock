@@ -30,6 +30,51 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@effect/data@npm:^0.17.6":
+  version: 0.17.6
+  resolution: "@effect/data@npm:0.17.6"
+  checksum: 4990fb549236ac6311635c1b5539a9afd5a654a562b5a698c9eea2a46f6846a164c8b9de1f4e9b40f50d85bd430c390893a1cfbf7880ca9dad25f73515ade1e7
+  languageName: node
+  linkType: hard
+
+"@effect/io@npm:^0.38.2":
+  version: 0.38.2
+  resolution: "@effect/io@npm:0.38.2"
+  peerDependencies:
+    "@effect/data": ^0.17.1
+  checksum: 8c17c3ac09f7983ede8147823429e15b20ab54090a9a4039eb312868eb84ab55d81ef95205b453085050475b7b3db837f0693c3680040c65fba4ac1cf0635c20
+  languageName: node
+  linkType: hard
+
+"@effect/match@npm:^0.34.0":
+  version: 0.34.0
+  resolution: "@effect/match@npm:0.34.0"
+  peerDependencies:
+    "@effect/data": ^0.17.1
+  checksum: 9bb820635642713986c2af62ac516b15a6bbae779b19d47cac606c8d21a010352fb56c6abc7fccb7ae7cf95efe346867ff1261526d76a2a2269e93b43e0cc7d9
+  languageName: node
+  linkType: hard
+
+"@effect/stm@npm:^0.22.0":
+  version: 0.22.0
+  resolution: "@effect/stm@npm:0.22.0"
+  peerDependencies:
+    "@effect/data": ^0.17.1
+    "@effect/io": ^0.38.0
+  checksum: fddc533f44a737cbdef1c6d6e0d348f723c041a4377d028c498fc8ad0e6e20127017b0486929b287bb08bb1954b00a5c60e46ee12f802302df97d3ee2a462597
+  languageName: node
+  linkType: hard
+
+"@effect/stream@npm:^0.34.0":
+  version: 0.34.0
+  resolution: "@effect/stream@npm:0.34.0"
+  peerDependencies:
+    "@effect/data": ^0.17.1
+    "@effect/io": ^0.38.0
+  checksum: 2cdc64c2c6b3818386f5db9dadd1315352126bef9b772ea638ee5620156d5bd44d931cc0e4a4ed275f042f771aa4ea9b9145ccb5be96e9825efbe4a54ad79b7c
+  languageName: node
+  linkType: hard
+
 "@gar/promisify@npm:^1.0.1":
   version: 1.1.3
   resolution: "@gar/promisify@npm:1.1.3"
@@ -900,6 +945,25 @@ __metadata:
   languageName: node
   linkType: hard
 
+"effect@npm:^2.0.0-next.29":
+  version: 2.0.0-next.29
+  resolution: "effect@npm:2.0.0-next.29"
+  dependencies:
+    "@effect/data": ^0.17.6
+    "@effect/io": ^0.38.2
+    "@effect/match": ^0.34.0
+    "@effect/stm": ^0.22.0
+    "@effect/stream": ^0.34.0
+  peerDependencies:
+    "@effect/data": ^0.17.6
+    "@effect/io": ^0.38.2
+    "@effect/match": ^0.34.0
+    "@effect/stm": ^0.22.0
+    "@effect/stream": ^0.34.0
+  checksum: 5ac8473812d6497af0e513c04e6866de6e4f52d789b9404d8591b286a796660d7fe6263d00c53fd46b61628ab2bc8c5452944b308b22a1fa3439bc513137cdf0
+  languageName: node
+  linkType: hard
+
 "emoji-regex@npm:^8.0.0":
   version: 8.0.0
   resolution: "emoji-regex@npm:8.0.0"
@@ -1339,6 +1403,7 @@ __metadata:
     "@types/express": ^4.17.17
     "@types/node": ^20.5.0
     concurrently: ^8.2.0
+    effect: ^2.0.0-next.29
     express: ^4.18.2
     express-handlebars: ^7.1.2
     fp-ts: ^2.16.1
