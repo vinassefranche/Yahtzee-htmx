@@ -1,12 +1,12 @@
-import * as Codec from "io-ts/Codec";
+import * as Schema from "@effect/schema/Schema";
 
 export const dieNumbers = [1, 2, 3, 4, 5, 6] as const;
 export type DieNumber = (typeof dieNumbers)[number];
-export const codec = Codec.struct({
-  number: Codec.literal(...dieNumbers),
-  selected: Codec.boolean,
-});
-export type Die = Codec.TypeOf<typeof codec>;
+export const schema = Schema.struct({
+  number: Schema.literal(...dieNumbers),
+  selected: Schema.boolean,
+})
+export type Die = Schema.To<typeof schema>;
 
 export const sumAll = (dice: ReadonlyArray<Die>) =>
   dice.reduce((acc, die) => acc + die.number, 0);

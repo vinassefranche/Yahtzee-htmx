@@ -30,14 +30,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@effect/data@npm:^0.17.6":
+"@effect/data@npm:^0.17.1, @effect/data@npm:^0.17.6":
   version: 0.17.6
   resolution: "@effect/data@npm:0.17.6"
   checksum: 4990fb549236ac6311635c1b5539a9afd5a654a562b5a698c9eea2a46f6846a164c8b9de1f4e9b40f50d85bd430c390893a1cfbf7880ca9dad25f73515ade1e7
   languageName: node
   linkType: hard
 
-"@effect/io@npm:^0.38.2":
+"@effect/io@npm:^0.38.0, @effect/io@npm:^0.38.2":
   version: 0.38.2
   resolution: "@effect/io@npm:0.38.2"
   peerDependencies:
@@ -52,6 +52,18 @@ __metadata:
   peerDependencies:
     "@effect/data": ^0.17.1
   checksum: 9bb820635642713986c2af62ac516b15a6bbae779b19d47cac606c8d21a010352fb56c6abc7fccb7ae7cf95efe346867ff1261526d76a2a2269e93b43e0cc7d9
+  languageName: node
+  linkType: hard
+
+"@effect/schema@npm:^0.33.2":
+  version: 0.33.2
+  resolution: "@effect/schema@npm:0.33.2"
+  dependencies:
+    fast-check: ^3.12.0
+  peerDependencies:
+    "@effect/data": ^0.17.1
+    "@effect/io": ^0.38.0
+  checksum: 066b90505d63d12537798cd589dcabab708213313b6f3e13faa933826fafabddb85ecd2c9e95745f7b5f90b9c3a276f14639e9a1fe6a57b1399ccd3500ef6719
   languageName: node
   linkType: hard
 
@@ -1086,6 +1098,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fast-check@npm:^3.12.0":
+  version: 3.12.0
+  resolution: "fast-check@npm:3.12.0"
+  dependencies:
+    pure-rand: ^6.0.0
+  checksum: 3ac61af9344731ebf63ae52c6a211bbcd8497fc2d030b980d96e4caeb04d47592a864db9085669e8b683684cf45d9bc7bf8a6dfb995367d4ef2c87bf5122e088
+  languageName: node
+  linkType: hard
+
 "fast-glob@npm:^3.2.12":
   version: 3.3.1
   resolution: "fast-glob@npm:3.3.1"
@@ -1146,13 +1167,6 @@ __metadata:
   version: 0.2.0
   resolution: "forwarded@npm:0.2.0"
   checksum: fd27e2394d8887ebd16a66ffc889dc983fbbd797d5d3f01087c020283c0f019a7d05ee85669383d8e0d216b116d720fc0cef2f6e9b7eb9f4c90c6e0bc7fd28e6
-  languageName: node
-  linkType: hard
-
-"fp-ts@npm:^2.16.1":
-  version: 2.16.1
-  resolution: "fp-ts@npm:2.16.1"
-  checksum: 94e8bb1d037fdc44414ac93bbabecc3f94fb798d6564e77427ae2ecfa0f77681ec35968598d7b0cbf8274566469c7b42e8727390eb889e1121c199341939c2a3
   languageName: node
   linkType: hard
 
@@ -1400,14 +1414,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "htmx-test@workspace:."
   dependencies:
+    "@effect/data": ^0.17.1
+    "@effect/io": ^0.38.0
+    "@effect/schema": ^0.33.2
     "@types/express": ^4.17.17
     "@types/node": ^20.5.0
     concurrently: ^8.2.0
     effect: ^2.0.0-next.29
     express: ^4.18.2
     express-handlebars: ^7.1.2
-    fp-ts: ^2.16.1
-    io-ts: ^2.2.20
     nodemon: ^3.0.1
     sqlite3: ^5.1.6
     tailwindcss: ^3.3.3
@@ -1538,15 +1553,6 @@ __metadata:
   version: 2.0.4
   resolution: "inherits@npm:2.0.4"
   checksum: 4a48a733847879d6cf6691860a6b1e3f0f4754176e4d71494c41f3475553768b10f84b5ce1d40fbd0e34e6bfbb864ee35858ad4dd2cf31e02fc4a154b724d7f1
-  languageName: node
-  linkType: hard
-
-"io-ts@npm:^2.2.20":
-  version: 2.2.20
-  resolution: "io-ts@npm:2.2.20"
-  peerDependencies:
-    fp-ts: ^2.5.0
-  checksum: 72517bf72ab1ad61b81960cb37f46e7a9f6dc84235b7d9b62f346ca84120dd89134b652fc3a0b9751129331084fd3e059349561bb96587d91ba7b40985fe7aac
   languageName: node
   linkType: hard
 
@@ -2387,6 +2393,13 @@ __metadata:
   version: 1.1.8
   resolution: "pstree.remy@npm:1.1.8"
   checksum: 5cb53698d6bb34dfb278c8a26957964aecfff3e161af5fbf7cee00bbe9d8547c7aced4bd9cb193bce15fb56e9e4220fc02a5bf9c14345ffb13a36b858701ec2d
+  languageName: node
+  linkType: hard
+
+"pure-rand@npm:^6.0.0":
+  version: 6.0.2
+  resolution: "pure-rand@npm:6.0.2"
+  checksum: 79de33876a4f515d759c48e98d00756bbd916b4ea260cc572d7adfa4b62cace9952e89f0241d0410214554503d25061140fe325c66f845213d2b1728ba8d413e
   languageName: node
   linkType: hard
 

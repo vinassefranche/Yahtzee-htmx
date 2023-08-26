@@ -1,29 +1,30 @@
+import * as Schema from "@effect/schema/Schema";
 import { Effect } from "effect";
-import * as Codec from "io-ts/Codec";
 import { Dice } from "../Dice";
 import { Die } from "../Die";
 
-const codecProps = {
-  ones: Codec.nullable(Codec.number),
-  twos: Codec.nullable(Codec.number),
-  threes: Codec.nullable(Codec.number),
-  fours: Codec.nullable(Codec.number),
-  fives: Codec.nullable(Codec.number),
-  sixes: Codec.nullable(Codec.number),
-  bonus: Codec.nullable(Codec.number),
-  threeOfAKind: Codec.nullable(Codec.number),
-  fourOfAKind: Codec.nullable(Codec.number),
-  fullHouse: Codec.nullable(Codec.number),
-  smallStraight: Codec.nullable(Codec.number),
-  largeStraight: Codec.nullable(Codec.number),
-  yams: Codec.nullable(Codec.number),
-  chance: Codec.nullable(Codec.number),
+const schemaProps = {
+  ones: Schema.nullable(Schema.number),
+  twos: Schema.nullable(Schema.number),
+  threes: Schema.nullable(Schema.number),
+  fours: Schema.nullable(Schema.number),
+  fives: Schema.nullable(Schema.number),
+  sixes: Schema.nullable(Schema.number),
+  bonus: Schema.nullable(Schema.number),
+  threeOfAKind: Schema.nullable(Schema.number),
+  fourOfAKind: Schema.nullable(Schema.number),
+  fullHouse: Schema.nullable(Schema.number),
+  smallStraight: Schema.nullable(Schema.number),
+  largeStraight: Schema.nullable(Schema.number),
+  yams: Schema.nullable(Schema.number),
+  chance: Schema.nullable(Schema.number),
 } as const;
-export const codec = Codec.struct(codecProps);
-export type Score = Codec.TypeOf<typeof codec>;
+export const schema = Schema.struct(schemaProps);
 
-export type ScoreType = keyof typeof codecProps;
-const scoreTypes = Object.keys(codecProps) as ReadonlyArray<ScoreType>;
+export type Score = Schema.To<typeof schema>;
+
+export type ScoreType = keyof typeof schemaProps;
+const scoreTypes = Object.keys(schemaProps) as ReadonlyArray<ScoreType>;
 export type ScorableScoreType = Exclude<ScoreType, "bonus">;
 
 export const isScoreType = (string: string): string is ScoreType =>

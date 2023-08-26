@@ -1,40 +1,23 @@
+import * as Schema from "@effect/schema/Schema";
 import { randomUUID } from "crypto";
-import { Context, Effect, identity, pipe } from "effect";
-import * as Codec from "io-ts/Codec";
-import * as Decoder from "io-ts/Decoder";
+import { Context, Effect, pipe } from "effect";
 import { Dice } from "../Dice";
 import { Score } from "../Score";
 
-export const codecTypeGuard: <A = never>() => <I, O>(
-  codec: Codec.Codec<I, O, A>
-) => Codec.Codec<I, O, A> = () => identity;
-
-export type Id = string & { __TYPE__: "GameId" };
-const generateGameId = () => randomUUID() as Id;
 const uuidRegex =
   /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
+const idSchema = pipe(
+  Schema.string,
+  Schema.pattern(uuidRegex),
+  Schema.brand("GameId")
+);
+export type Id = Schema.To<typeof idSchema>;
+const generateGameId = () => randomUUID() as Id;
 
 export const parseGameId = (uuid: unknown): Effect.Effect<never, Error, Id> =>
   typeof uuid === "string" && uuidRegex.test(uuid)
     ? Effect.succeed(uuid as Id)
     : Effect.fail(new Error("given uuid is not a valid uuid"));
-
-const idCodec = Codec.make(
-  {
-    decode: (v: unknown) =>
-      pipe(
-        parseGameId(v),
-        Effect.match({
-          onFailure: (error) => Decoder.failure(v, error.message),
-          onSuccess: Decoder.success,
-        }),
-        Effect.runSync
-      ),
-  },
-  {
-    encode: (id) => id as string,
-  }
-);
 
 const gameRounds = [0, 1, 2, 3] as const;
 type GameRound = (typeof gameRounds)[number];
@@ -46,47 +29,27 @@ export const isGameRoundThatCanBeIncreased = (
   round: GameRound
 ): round is GameRoundThatCanBeIncreased => round !== 3;
 
-const gameSumCodec = {
-  0: Codec.struct({
-    round: Codec.literal(0),
-    dice: Codec.literal(null),
-  }),
-  "1": Codec.struct({
-    round: Codec.literal(1),
-    dice: Dice.codec,
-  }),
-  "2": Codec.struct({
-    round: Codec.literal(2),
-    dice: Dice.codec,
-  }),
-  "3": Codec.struct({
-    round: Codec.literal(3),
-    dice: Dice.codec,
-  }),
-} satisfies Record<GameRound, Codec.Codec<unknown, any, any>>;
+const baseSchemaProps = {
+  score: Score.schema,
+  id: idSchema,
+} as const;
 
-export const codec = pipe(
-  Codec.struct({
-    score: Score.codec,
-    id: idCodec,
-  }),
-  Codec.intersect(Codec.sum("round")(gameSumCodec)),
-  codecTypeGuard<Game>()
-);
+const gameWithoutDiceSchema = Schema.struct({
+  ...baseSchemaProps,
+  round: Schema.literal(0),
+  dice: Schema.null,
+});
 
-type BaseGame = {
-  id: Id;
-  score: Score.Score;
-};
+const gameWithDiceSchema = Schema.struct({
+  ...baseSchemaProps,
+  round: Schema.literal(1, 2, 3),
+  dice: Dice.schema,
+});
 
-type GameWithoutDice = BaseGame & {
-  dice: null;
-  round: Extract<GameRound, 0>;
-};
-export type GameWithDice = BaseGame & {
-  dice: Dice.Dice;
-  round: Exclude<GameRound, 0>;
-};
+export const schema = Schema.union(gameWithoutDiceSchema, gameWithDiceSchema);
+
+type GameWithoutDice = Schema.To<typeof gameWithoutDiceSchema>;
+export type GameWithDice = Schema.To<typeof gameWithDiceSchema>;
 export type Game = GameWithDice | GameWithoutDice;
 
 export const isGameWithDice = (game: Game): game is GameWithDice =>
