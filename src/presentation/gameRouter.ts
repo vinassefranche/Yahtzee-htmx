@@ -1,7 +1,6 @@
 import { Effect } from "effect";
 import express, { Request, Response } from "express";
 import { readonlyArray } from "fp-ts";
-import { pipe } from "fp-ts/lib/function";
 import {
   addScoreForScoreType,
   createGame,
@@ -91,7 +90,7 @@ const errorToInternalError = (response: Response) => (error: Error) => {
 };
 
 const getGameIdFromReq = (req: Request) =>
-  Game.parseGameIdEffect(req.headers["game-id"]);
+  Game.parseGameId(req.headers["game-id"]);
 
 export const buildGameRouter = ({
   gameRepository,
@@ -103,8 +102,7 @@ export const buildGameRouter = ({
   const runProgramWithDependencies = <A>(
     program: Effect.Effect<Game.GameRepositoryEffect, Error, A>
   ) =>
-    pipe(
-      program,
+    program.pipe(
       Effect.provideService(
         Game.GameRepository,
         Game.GameRepository.of(gameRepository)
@@ -113,8 +111,7 @@ export const buildGameRouter = ({
     );
 
   router.get("/", (_, res) => {
-    pipe(
-      createGame(),
+    createGame().pipe(
       Effect.match({
         onFailure: errorToInternalError(res),
         onSuccess: (game) => {
@@ -126,9 +123,7 @@ export const buildGameRouter = ({
   });
 
   router.get("/game/:uuid", (req, res) => {
-    pipe(
-      req.params.uuid,
-      Game.parseGameIdEffect,
+    Game.parseGameId(req.params.uuid).pipe(
       Effect.flatMap(getGame),
       Effect.match({
         onFailure: (error) => {
@@ -157,9 +152,7 @@ export const buildGameRouter = ({
   });
 
   router.get("/main-button", (req, res) => {
-    pipe(
-      req,
-      getGameIdFromReq,
+    getGameIdFromReq(req).pipe(
       Effect.flatMap(getGame),
       Effect.match({
         onFailure: errorToBadRequest(res),
@@ -179,9 +172,7 @@ export const buildGameRouter = ({
   });
 
   router.post("/reset", (req, res) => {
-    pipe(
-      req,
-      getGameIdFromReq,
+    getGameIdFromReq(req).pipe(
       Effect.flatMap(resetGame),
       Effect.match({
         onFailure: errorToBadRequest(res),
@@ -196,9 +187,7 @@ export const buildGameRouter = ({
   });
 
   router.get("/score-options", (req, res) => {
-    pipe(
-      req,
-      getGameIdFromReq,
+    getGameIdFromReq(req).pipe(
       Effect.flatMap(getGame),
       Effect.match({
         onFailure: errorToBadRequest(res),
@@ -213,9 +202,7 @@ export const buildGameRouter = ({
   });
 
   router.put("/score/:scoreType", (req, res) => {
-    pipe(
-      req,
-      getGameIdFromReq,
+    getGameIdFromReq(req).pipe(
       Effect.bindTo("gameId"),
       Effect.bind("scoreType", () =>
         Score.parseScorableScoreType(req.params.scoreType)
@@ -239,9 +226,7 @@ export const buildGameRouter = ({
   });
 
   router.get("/score", (req, res) => {
-    pipe(
-      req,
-      getGameIdFromReq,
+    getGameIdFromReq(req).pipe(
       Effect.flatMap(getGame),
       Effect.match({
         onFailure: errorToBadRequest(res),
@@ -258,9 +243,7 @@ export const buildGameRouter = ({
   });
 
   router.put("/throw-dice", (req, res) => {
-    pipe(
-      req,
-      getGameIdFromReq,
+    getGameIdFromReq(req).pipe(
       Effect.flatMap(throwDice),
       Effect.match({
         onFailure: errorToBadRequest(res),
@@ -275,9 +258,7 @@ export const buildGameRouter = ({
   });
 
   router.put("/select/:diceIndex", (req, res) => {
-    pipe(
-      req,
-      getGameIdFromReq,
+    getGameIdFromReq(req).pipe(
       Effect.bindTo("gameId"),
       Effect.bind("diceIndex", () =>
         Dice.parseDiceIndex(parseInt(req.params.diceIndex))

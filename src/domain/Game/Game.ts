@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 import { Context, Effect } from "effect";
-import { either } from "fp-ts";
 import { TaskEither } from "fp-ts/lib/TaskEither";
 import { identity, pipe } from "fp-ts/lib/function";
 import * as Codec from "io-ts/Codec";
@@ -16,13 +15,8 @@ export type Id = string & { __TYPE__: "GameId" };
 const generateGameId = () => randomUUID() as Id;
 const uuidRegex =
   /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
-export const parseGameId = either.fromPredicate(
-  (uuid: unknown): uuid is Id =>
-    typeof uuid === "string" && uuidRegex.test(uuid),
-  () => new Error("given uuid is not a valid uuid")
-);
 
-export const parseGameIdEffect = (uuid: unknown) =>
+export const parseGameId = (uuid: unknown): Effect.Effect<never, Error, Id> =>
   typeof uuid === "string" && uuidRegex.test(uuid)
     ? Effect.succeed(uuid as Id)
     : Effect.fail(new Error("given uuid is not a valid uuid"));
@@ -32,7 +26,11 @@ const idCodec = Codec.make(
     decode: (v: unknown) =>
       pipe(
         parseGameId(v),
-        either.mapLeft((error) => Decoder.error(v, error.message))
+        Effect.match({
+          onFailure: (error) => Decoder.failure(v, error.message),
+          onSuccess: Decoder.success,
+        }),
+        Effect.runSync
       ),
   },
   {
@@ -141,12 +139,14 @@ export const addScoreForScoreType =
     return pipe(
       game.score,
       Score.addScoreForScoreType({ dice: game.dice, scoreType }),
-      Effect.map((updatedScore): GameWithoutDice => ({
-        dice: null,
-        round: 0,
-        score: updatedScore,
-        id: game.id,
-      }))
+      Effect.map(
+        (updatedScore): GameWithoutDice => ({
+          dice: null,
+          round: 0,
+          score: updatedScore,
+          id: game.id,
+        })
+      )
     );
   };
 
