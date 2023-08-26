@@ -1,7 +1,5 @@
 import { randomUUID } from "crypto";
-import { Context, Effect } from "effect";
-import { TaskEither } from "fp-ts/lib/TaskEither";
-import { identity, pipe } from "fp-ts/lib/function";
+import { Context, Effect, identity, pipe } from "effect";
 import * as Codec from "io-ts/Codec";
 import * as Decoder from "io-ts/Decoder";
 import { Dice } from "../Dice";
@@ -195,16 +193,11 @@ const increaseRound = <Round extends GameRoundThatCanBeIncreased>(
 export const totalScore = (game: Game) => Score.total(game.score);
 
 export type GameRepository = {
-  getById: (id: Id) => TaskEither<Error, Game>;
-  store: <T extends Game>(game: T) => TaskEither<Error, T>;
-};
-
-export type GameRepositoryEffect = {
   getById: (id: Id) => Effect.Effect<never, Error, Game>;
   store: <T extends Game>(game: T) => Effect.Effect<never, Error, T>;
 };
 
-export const GameRepository = Context.Tag<GameRepositoryEffect>();
+export const GameRepository = Context.Tag<GameRepository>();
 
 export const storeGame = <T extends Game>(game: T) =>
   GameRepository.pipe(

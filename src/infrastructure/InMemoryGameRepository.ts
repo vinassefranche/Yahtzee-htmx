@@ -1,20 +1,19 @@
-import { readonlyArray, taskEither } from "fp-ts";
+import { Effect } from "effect";
 import { Game } from "../domain";
-import { pipe } from "fp-ts/lib/function";
 
 export const buildInMemoryGameRepository = (): Game.GameRepository => {
   let games: ReadonlyArray<Game.Game> = [];
   return {
     getById: (id) => {
-      return pipe(
-        games,
-        readonlyArray.findFirst((game) => game.id === id),
-        taskEither.fromOption(() => new Error("game not found"))
-      );
+      const game = games.find((game) => game.id === id)
+      if(!game) {
+        return Effect.fail(new Error("game not found"))
+      }
+      return Effect.succeed(game)
     },
     store: (game) => {
       games = games.filter(({ id }) => id !== game.id).concat(game);
-      return taskEither.right(game);
+      return Effect.succeed(game);
     },
   };
 };

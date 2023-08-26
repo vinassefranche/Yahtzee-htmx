@@ -1,6 +1,5 @@
 import { Effect } from "effect";
 import express, { Request, Response } from "express";
-import { readonlyArray } from "fp-ts";
 import {
   addScoreForScoreType,
   createGame,
@@ -46,13 +45,12 @@ const dieNumberToClass: Record<Die.DieNumber, string> = {
   6: "six",
 };
 
-const getDiceForTemplate = readonlyArray.mapWithIndex(
-  (index, die: Die.Die) => ({
+const getDiceForTemplate = (dice: Dice.Dice) =>
+  dice.map((die: Die.Die, index) => ({
     class: dieNumberToClass[die.number],
     selected: die.selected,
     index,
-  })
-);
+  }));
 
 const generateScoreTable = (game: Game.Game) =>
   (
@@ -95,12 +93,12 @@ const getGameIdFromReq = (req: Request) =>
 export const buildGameRouter = ({
   gameRepository,
 }: {
-  gameRepository: Game.GameRepositoryEffect;
+  gameRepository: Game.GameRepository;
 }) => {
   const router = express.Router();
 
   const runProgramWithDependencies = <A>(
-    program: Effect.Effect<Game.GameRepositoryEffect, Error, A>
+    program: Effect.Effect<Game.GameRepository, Error, A>
   ) =>
     program.pipe(
       Effect.provideService(
