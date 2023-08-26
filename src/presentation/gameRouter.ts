@@ -1,5 +1,6 @@
+import { Effect } from "effect";
 import express, { Request, Response } from "express";
-import { either, readerTaskEither, readonlyArray } from "fp-ts";
+import { readerTaskEither, readonlyArray } from "fp-ts";
 import { pipe } from "fp-ts/lib/function";
 import {
   addScoreForScoreType,
@@ -10,7 +11,6 @@ import {
   toggleDieSelection,
 } from "../application";
 import { Dice, Die, Game, Score } from "../domain";
-import { Effect } from "effect";
 
 const scoreLabels: Record<Score.ScoreType, string> = {
   ones: "Ones",
@@ -214,25 +214,27 @@ export const buildGameRouter = ({
   router.put("/score/:scoreType", (req, res) => {
     pipe(
       req,
-      getGameIdFromReq,
-      either.bindTo("gameId"),
-      either.apS(
-        "scoreType",
+      getGameIdFromReqEffect,
+      Effect.bindTo("gameId"),
+      Effect.bind("scoreType", () =>
         Score.parseScorableScoreType(req.params.scoreType)
       ),
-      readerTaskEither.fromEither,
-      readerTaskEither.flatMap(addScoreForScoreType),
-      readerTaskEither.match(errorToBadRequest(res), (game) => {
-        res.header("hx-trigger", "score-updated");
-        if (Game.isOver(game)) {
-          res.send("");
-          return;
-        }
-        res.render("dice", {
-          dice: [],
-        });
-      })
-    )({ gameRepository })();
+      Effect.flatMap(addScoreForScoreType),
+      Effect.match({
+        onFailure: errorToBadRequest(res),
+        onSuccess: (game) => {
+          res.header("hx-trigger", "score-updated");
+          if (Game.isOver(game)) {
+            res.send("");
+            return;
+          }
+          res.render("dice", {
+            dice: [],
+          });
+        },
+      }),
+      runProgramWithDependencies
+    );
   });
 
   router.get("/score", (req, res) => {
@@ -254,40 +256,42 @@ export const buildGameRouter = ({
   router.put("/throw-dice", (req, res) => {
     pipe(
       req,
-      getGameIdFromReq,
-      readerTaskEither.fromEither,
-      readerTaskEither.flatMap(throwDice),
-      readerTaskEither.match(errorToBadRequest(res), (game) => {
-        res.header("hx-trigger-after-settle", "dice-thrown").render("dice", {
-          dice: getDiceForTemplate(game.dice),
-        });
-      })
-    )({ gameRepository })();
+      getGameIdFromReqEffect,
+      Effect.flatMap(throwDice),
+      Effect.match({
+        onFailure: errorToBadRequest(res),
+        onSuccess: (game) => {
+          res.header("hx-trigger-after-settle", "dice-thrown").render("dice", {
+            dice: getDiceForTemplate(game.dice),
+          });
+        },
+      }),
+      runProgramWithDependencies
+    );
   });
 
   router.put("/select/:diceIndex", (req, res) => {
     pipe(
       req,
-      getGameIdFromReq,
-      either.bindTo("gameId"),
-      either.apS(
-        "diceIndex",
+      getGameIdFromReqEffect,
+      Effect.bindTo("gameId"),
+      Effect.bind("diceIndex", () =>
         Dice.parseDiceIndex(parseInt(req.params.diceIndex))
       ),
-      readerTaskEither.fromEither,
-      readerTaskEither.bind("updatedGame", toggleDieSelection),
-      readerTaskEither.match(
-        errorToBadRequest(res),
-        ({ updatedGame, diceIndex }) => {
+      Effect.bind("updatedGame", toggleDieSelection),
+      Effect.match({
+        onFailure: errorToBadRequest(res),
+        onSuccess: ({ updatedGame, diceIndex }) => {
           const die = updatedGame.dice[diceIndex];
           res.render("die", {
             class: dieNumberToClass[die.number],
             selected: die.selected,
             index: diceIndex,
           });
-        }
-      )
-    )({ gameRepository })();
+        },
+      }),
+      runProgramWithDependencies
+    );
   });
   return router;
 };

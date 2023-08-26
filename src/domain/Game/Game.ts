@@ -1,13 +1,12 @@
-import { flow, identity, pipe } from "fp-ts/lib/function";
 import { randomUUID } from "crypto";
-import { Dice } from "../Dice";
-import { Score } from "../Score";
+import { Context, Effect } from "effect";
 import { either } from "fp-ts";
-import { Either } from "fp-ts/lib/Either";
+import { TaskEither } from "fp-ts/lib/TaskEither";
+import { identity, pipe } from "fp-ts/lib/function";
 import * as Codec from "io-ts/Codec";
 import * as Decoder from "io-ts/Decoder";
-import { Context, Effect } from "effect";
-import { TaskEither } from "fp-ts/lib/TaskEither";
+import { Dice } from "../Dice";
+import { Score } from "../Score";
 
 export const codecTypeGuard: <A = never>() => <I, O>(
   codec: Codec.Codec<I, O, A>
@@ -108,22 +107,17 @@ export const create = (): Game => ({
   id: generateGameId(),
 });
 
-export const startRound1 = (game: Game) =>
-  pipe(
-    game,
-    either.fromPredicate(
-      (game) => !isOver(game),
-      () => new Error("Game is over")
-    ),
-    either.map(
-      (game): GameWithDice => ({
-        dice: Dice.initializeDice(),
-        round: 1,
-        score: game.score,
-        id: game.id,
-      })
-    )
-  );
+export const startRound1 = (game: Game) => {
+  if (isOver(game)) {
+    return Effect.fail(new Error("Game is over"));
+  }
+  return Effect.succeed<GameWithDice>({
+    dice: Dice.initializeDice(),
+    round: 1,
+    score: game.score,
+    id: game.id,
+  });
+};
 
 export const reset = (game: Game): Game => ({
   dice: null,
@@ -139,52 +133,50 @@ export const getScoreForScoreType =
   (scoreType: Score.ScoreType) => (game: Game) =>
     game.score[scoreType];
 
-export const addScoreForScoreType = (scoreType: Score.ScorableScoreType) =>
-  flow(
-    either.fromPredicate(isGameWithDice, () => new Error("Dice not thrown")),
-    either.bindTo("game"),
-    either.bind("updatedScore", ({ game }) =>
-      Score.addScoreForScoreType({ dice: game.dice, scoreType })(game.score)
-    ),
-    either.map(
-      ({ updatedScore, game }): GameWithoutDice => ({
+export const addScoreForScoreType =
+  (scoreType: Score.ScorableScoreType) => (game: Game) => {
+    if (!isGameWithDice(game)) {
+      return Effect.fail(new Error("Dice not thrown"));
+    }
+    return pipe(
+      game.score,
+      Score.addScoreForScoreType({ dice: game.dice, scoreType }),
+      Effect.map((updatedScore): GameWithoutDice => ({
         dice: null,
         round: 0,
         score: updatedScore,
         id: game.id,
-      })
-    )
-  );
-
-export const toggleDieSelection = (dieIndex: Dice.DiceIndex) =>
-  flow(
-    either.fromPredicate(isGameWithDice, () => new Error("Dice not thrown")),
-    either.map(
-      (game): GameWithDice => ({
-        ...game,
-        dice: Dice.toggleDieSelection(dieIndex)(game.dice),
-      })
-    )
-  );
-
-export const throwDice = (game: Game): Either<Error, GameWithDice> => {
-  if (!isGameWithDice(game)) {
-    return startRound1(game);
-  } else {
-    return pipe(
-      game.round,
-      either.fromPredicate(
-        isGameRoundThatCanBeIncreased,
-        () => new Error(`Dice cannot be thrown in round ${game.round}`)
-      ),
-      either.map(increaseRound),
-      either.map((round) => ({
-        ...game,
-        round,
-        dice: Dice.throwDice(game.dice),
       }))
     );
+  };
+
+export const toggleDieSelection =
+  (dieIndex: Dice.DiceIndex) => (game: Game) => {
+    if (!isGameWithDice(game)) {
+      return Effect.fail(new Error("Dice not thrown"));
+    }
+    return Effect.succeed<GameWithDice>({
+      ...game,
+      dice: Dice.toggleDieSelection(dieIndex)(game.dice),
+    });
+  };
+
+export const throwDice = (
+  game: Game
+): Effect.Effect<never, Error, GameWithDice> => {
+  if (!isGameWithDice(game)) {
+    return startRound1(game);
   }
+  if (!isGameRoundThatCanBeIncreased(game.round)) {
+    return Effect.fail(
+      new Error(`Dice cannot be thrown in round ${game.round}`)
+    );
+  }
+  return Effect.succeed({
+    ...game,
+    dice: Dice.throwDice(game.dice),
+    round: increaseRound(game.round),
+  });
 };
 
 type IncreasedRound<Round extends GameRoundThatCanBeIncreased> = Round extends 0
@@ -214,7 +206,7 @@ export type GameRepositoryEffect = {
 
 export const GameRepository = Context.Tag<GameRepositoryEffect>();
 
-export const storeGame = (game: Game) =>
+export const storeGame = <T extends Game>(game: T) =>
   GameRepository.pipe(
     Effect.flatMap((gameRepository) => gameRepository.store(game))
   );

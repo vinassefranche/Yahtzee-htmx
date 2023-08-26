@@ -1,8 +1,7 @@
-import { either } from "fp-ts";
+import { Effect } from "effect";
+import * as Codec from "io-ts/Codec";
 import { Dice } from "../Dice";
 import { Die } from "../Die";
-import { pipe } from "fp-ts/lib/function";
-import * as Codec from "io-ts/Codec";
 
 const codecProps = {
   ones: Codec.nullable(Codec.number),
@@ -34,12 +33,11 @@ export const isScorableScoreType = (
   string: string
 ): string is ScorableScoreType => isScoreType(string) && string !== "bonus";
 
-export const parseScorableScoreType = either.fromPredicate(
-  (scorableScoreType: unknown): scorableScoreType is ScorableScoreType =>
-    typeof scorableScoreType === "string" &&
-    isScorableScoreType(scorableScoreType),
-  () => new Error("given scoreType is not a valid one")
-);
+export const parseScorableScoreType = (scorableScoreType: unknown) =>
+  typeof scorableScoreType === "string" &&
+  isScorableScoreType(scorableScoreType)
+    ? Effect.succeed<ScorableScoreType>(scorableScoreType)
+    : Effect.fail(new Error("given scoreType is not a valid one"));
 
 export const initializeScore = () =>
   scoreTypes.reduce(
@@ -66,25 +64,21 @@ export const total = (score: Score) =>
 
 export const addScoreForScoreType =
   ({ dice, scoreType }: { dice: Dice.Dice; scoreType: ScorableScoreType }) =>
-  (score: Score) => {
-    return pipe(
-      score,
-      either.fromPredicate(
-        isScoreTypeAvailable(scoreType),
-        () => new Error(`score for ${scoreType} already set`)
-      ),
-      either.map(
-        (score): Score => ({
-          ...score,
-          [scoreType]: getScoreForDiceAndScoreType(dice)(scoreType),
-        })
-      ),
-      either.map((score) =>
-        isScoreTypeAvailable("bonus")(score) && isEligibleForBonus(score)
-          ? { ...score, bonus: 35 }
-          : score
-      )
-    );
+  (score: Score): Effect.Effect<never, Error, Score> => {
+    if (!isScoreTypeAvailable(scoreType)(score)) {
+      return Effect.fail(new Error(`score for ${scoreType} already set`));
+    }
+    const newScore = {
+      ...score,
+      [scoreType]: getScoreForDiceAndScoreType(dice)(scoreType),
+    };
+    if (
+      isScoreTypeAvailable("bonus")(newScore) &&
+      isEligibleForBonus(newScore)
+    ) {
+      return Effect.succeed({ ...newScore, bonus: 35 });
+    }
+    return Effect.succeed(newScore);
   };
 
 export const getScoreForDiceAndScoreType =

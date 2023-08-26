@@ -1,19 +1,16 @@
-import { taskEither } from "fp-ts";
-import { pipe } from "fp-ts/lib/function";
+import { Effect, pipe } from "effect";
 import { Game, Score } from "../domain";
 
-export const addScoreForScoreType =
-  ({
+export const addScoreForScoreType = ({
+  gameId,
+  scoreType,
+}: {
+  gameId: Game.Id;
+  scoreType: Score.ScorableScoreType;
+}) =>
+  pipe(
     gameId,
-    scoreType,
-  }: {
-    gameId: Game.Id;
-    scoreType: Score.ScorableScoreType;
-  }) =>
-  ({ gameRepository }: { gameRepository: Game.GameRepository }) =>
-    pipe(
-      gameId,
-      gameRepository.getById,
-      taskEither.flatMapEither(Game.addScoreForScoreType(scoreType)),
-      taskEither.flatMap(gameRepository.store)
-    );
+    Game.getGameById,
+    Effect.flatMap(Game.addScoreForScoreType(scoreType)),
+    Effect.flatMap(Game.storeGame)
+  );

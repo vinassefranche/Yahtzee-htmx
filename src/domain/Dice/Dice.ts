@@ -1,6 +1,6 @@
-import { either } from "fp-ts";
-import { Die } from "../Die";
+import { Effect } from "effect";
 import * as Codec from "io-ts/Codec";
+import { Die } from "../Die";
 
 type TupleIndices<T extends readonly any[]> = Extract<
   keyof T,
@@ -25,11 +25,10 @@ const diceIndexes = Array.from(tupleCodecProps.keys()) as DiceIndex[];
 export const isDiceIndex = (index: number): index is DiceIndex =>
   diceIndexes.includes(index as DiceIndex);
 
-export const parseDiceIndex = either.fromPredicate(
-  (diceIndex: unknown): diceIndex is DiceIndex =>
-    typeof diceIndex === "number" && isDiceIndex(diceIndex),
-  () => new Error("given diceIndex is not a valid one")
-);
+export const parseDiceIndex = (diceIndex: unknown) =>
+  typeof diceIndex === "number" && isDiceIndex(diceIndex)
+    ? Effect.succeed<DiceIndex>(diceIndex)
+    : Effect.fail(new Error("given diceIndex is not a valid one"));
 
 const map =
   (fn: (die: Die.Die, index: DiceIndex) => Die.Die) =>
