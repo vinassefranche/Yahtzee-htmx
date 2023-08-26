@@ -22,6 +22,12 @@ export const parseGameId = either.fromPredicate(
     typeof uuid === "string" && uuidRegex.test(uuid),
   () => new Error("given uuid is not a valid uuid")
 );
+
+export const parseGameIdEffect = (uuid: unknown) =>
+  typeof uuid === "string" && uuidRegex.test(uuid)
+    ? Effect.succeed(uuid as Id)
+    : Effect.fail(new Error("given uuid is not a valid uuid"));
+
 const idCodec = Codec.make(
   {
     decode: (v: unknown) =>
@@ -211,4 +217,9 @@ export const GameRepository = Context.Tag<GameRepositoryEffect>();
 export const storeGame = (game: Game) =>
   GameRepository.pipe(
     Effect.flatMap((gameRepository) => gameRepository.store(game))
+  );
+
+export const getGameById = (id: Id) =>
+  GameRepository.pipe(
+    Effect.flatMap((gameRepository) => gameRepository.getById(id))
   );

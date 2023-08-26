@@ -1,13 +1,9 @@
-import { taskEither } from "fp-ts";
+import { Effect } from "effect";
 import { Game } from "../domain";
-import { pipe } from "fp-ts/lib/function";
+import { flow } from "effect/Function";
 
-export const resetGame =
-  (gameId: Game.Id) =>
-  ({ gameRepository }: { gameRepository: Game.GameRepository }) =>
-    pipe(
-      gameId,
-      gameRepository.getById,
-      taskEither.map(Game.reset),
-      taskEither.flatMap(gameRepository.store)
-    );
+export const resetGame = flow(
+  Game.getGameById,
+  Effect.map(Game.reset),
+  Effect.flatMap(Game.storeGame)
+);

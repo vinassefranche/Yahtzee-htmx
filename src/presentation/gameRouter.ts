@@ -93,6 +93,9 @@ const errorToInternalError = (response: Response) => (error: Error) => {
 const getGameIdFromReq = (req: Request) =>
   Game.parseGameId(req.headers["game-id"]);
 
+const getGameIdFromReqEffect = (req: Request) =>
+  Game.parseGameIdEffect(req.headers["game-id"]);
+
 export const buildGameRouter = ({
   gameRepository,
   gameRepositoryEffect,
@@ -180,15 +183,18 @@ export const buildGameRouter = ({
   router.post("/reset", (req, res) => {
     pipe(
       req,
-      getGameIdFromReq,
-      readerTaskEither.fromEither,
-      readerTaskEither.flatMap(resetGame),
-      readerTaskEither.match(errorToBadRequest(res), () => {
-        res.header("hx-trigger", "game-reset").render("dice", {
-          dice: [],
-        });
-      })
-    )({ gameRepository })();
+      getGameIdFromReqEffect,
+      Effect.flatMap(resetGame),
+      Effect.match({
+        onFailure: errorToBadRequest(res),
+        onSuccess: () => {
+          res.header("hx-trigger", "game-reset").render("dice", {
+            dice: [],
+          });
+        },
+      }),
+      runProgramWithDependencies
+    );
   });
 
   router.get("/score-options", (req, res) => {
