@@ -2,7 +2,7 @@ import { readonlyArray, taskEither } from "fp-ts";
 import { Game } from "../domain";
 import { pipe } from "fp-ts/lib/function";
 
-export const buildInMemoryGameRepository = (): Game.Repository => {
+export const buildInMemoryGameRepository = (): Game.GameRepository => {
   let games: ReadonlyArray<Game.Game> = [];
   return {
     getById: (id) => {

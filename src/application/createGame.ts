@@ -1,7 +1,4 @@
-import { pipe } from "fp-ts/lib/function";
+import { pipe } from "effect";
 import { Game } from "../domain";
 
-export const createGame =
-() =>
-  ({ gameRepository }: { gameRepository: Game.Repository }) =>
-    pipe(Game.create(), gameRepository.store);
+export const createGame = () => pipe(Game.create(), Game.storeGame);

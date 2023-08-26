@@ -4,7 +4,7 @@ import { Game } from "../domain";
 
 export const throwDice =
   (gameId: Game.Id) =>
-  ({ gameRepository }: { gameRepository: Game.Repository }) =>
+  ({ gameRepository }: { gameRepository: Game.GameRepository }) =>
     pipe(
       gameId,
       gameRepository.getById,

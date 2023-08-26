@@ -10,6 +10,7 @@ import {
   toggleDieSelection,
 } from "../application";
 import { Dice, Die, Game, Score } from "../domain";
+import { Effect } from "effect";
 
 const scoreLabels: Record<Score.ScoreType, string> = {
   ones: "Ones",
@@ -94,18 +95,36 @@ const getGameIdFromReq = (req: Request) =>
 
 export const buildGameRouter = ({
   gameRepository,
+  gameRepositoryEffect,
 }: {
-  gameRepository: Game.Repository;
+  gameRepository: Game.GameRepository;
+  gameRepositoryEffect: Game.GameRepositoryEffect;
 }) => {
   const router = express.Router();
+
+  const runProgramWithDependencies = <A>(
+    program: Effect.Effect<Game.GameRepositoryEffect, Error, A>
+  ) =>
+    pipe(
+      program,
+      Effect.provideService(
+        Game.GameRepository,
+        Game.GameRepository.of(gameRepositoryEffect)
+      ),
+      Effect.runPromise
+    );
 
   router.get("/", (_, res) => {
     pipe(
       createGame(),
-      readerTaskEither.match(errorToInternalError(res), (game) => {
-        res.redirect(`/game/${game.id}`);
-      })
-    )({ gameRepository })();
+      Effect.match({
+        onFailure: errorToInternalError(res),
+        onSuccess: (game) => {
+          res.redirect(`/game/${game.id}`);
+        },
+      }),
+      runProgramWithDependencies
+    );
   });
 
   router.get("/game/:uuid", (req, res) => {

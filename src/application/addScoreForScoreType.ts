@@ -10,7 +10,7 @@ export const addScoreForScoreType =
     gameId: Game.Id;
     scoreType: Score.ScorableScoreType;
   }) =>
-  ({ gameRepository }: { gameRepository: Game.Repository }) =>
+  ({ gameRepository }: { gameRepository: Game.GameRepository }) =>
     pipe(
       gameId,
       gameRepository.getById,

@@ -4,9 +4,10 @@ import { Dice } from "../Dice";
 import { Score } from "../Score";
 import { either } from "fp-ts";
 import { Either } from "fp-ts/lib/Either";
-import { TaskEither } from "fp-ts/lib/TaskEither";
 import * as Codec from "io-ts/Codec";
 import * as Decoder from "io-ts/Decoder";
+import { Context, Effect } from "effect";
+import { TaskEither } from "fp-ts/lib/TaskEither";
 
 export const codecTypeGuard: <A = never>() => <I, O>(
   codec: Codec.Codec<I, O, A>
@@ -195,7 +196,19 @@ const increaseRound = <Round extends GameRoundThatCanBeIncreased>(
 
 export const totalScore = (game: Game) => Score.total(game.score);
 
-export type Repository = {
+export type GameRepository = {
   getById: (id: Id) => TaskEither<Error, Game>;
   store: <T extends Game>(game: T) => TaskEither<Error, T>;
 };
+
+export type GameRepositoryEffect = {
+  getById: (id: Id) => Effect.Effect<never, Error, Game>;
+  store: <T extends Game>(game: T) => Effect.Effect<never, Error, T>;
+};
+
+export const GameRepository = Context.Tag<GameRepositoryEffect>();
+
+export const storeGame = (game: Game) =>
+  GameRepository.pipe(
+    Effect.flatMap((gameRepository) => gameRepository.store(game))
+  );

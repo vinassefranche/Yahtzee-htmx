@@ -4,7 +4,7 @@ import { pipe } from "fp-ts/lib/function";
 
 export const resetGame =
   (gameId: Game.Id) =>
-  ({ gameRepository }: { gameRepository: Game.Repository }) =>
+  ({ gameRepository }: { gameRepository: Game.GameRepository }) =>
     pipe(
       gameId,
       gameRepository.getById,

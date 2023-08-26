@@ -4,7 +4,7 @@ import { Dice, Game } from "../domain";
 
 export const toggleDieSelection =
   ({ gameId, diceIndex }: { gameId: Game.Id; diceIndex: Dice.DiceIndex }) =>
-  ({ gameRepository }: { gameRepository: Game.Repository }) =>
+  ({ gameRepository }: { gameRepository: Game.GameRepository }) =>
     pipe(
       gameId,
       gameRepository.getById,
