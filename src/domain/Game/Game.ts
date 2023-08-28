@@ -50,7 +50,7 @@ export const schema = Schema.union(gameWithoutDiceSchema, gameWithDiceSchema);
 
 type GameWithoutDice = Schema.To<typeof gameWithoutDiceSchema>;
 export type GameWithDice = Schema.To<typeof gameWithDiceSchema>;
-export type Game = GameWithDice | GameWithoutDice;
+export type Game = Schema.To<typeof schema>;
 
 export const isGameWithDice = (game: Game): game is GameWithDice =>
   game.dice !== null;
